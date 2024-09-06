@@ -23,8 +23,10 @@ def classify(model_path):
 
     frames = []
     categories = np.load(os.path.join(util.getDatasetPath(), "categories.npy"))
-    predicted_exercise = "None"
+    predicted_exercise = []
+    effective_exercise = "None"
     last_predicted_exercise = "None"
+
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -55,20 +57,26 @@ def classify(model_path):
             # Eseguo la predizione
             predictions = model.predict([X1, X2, X3], verbose=0)
             prediction = np.argmax(predictions, axis=1)[0]
-            predicted_exercise = categories[prediction] if predictions[0][prediction] > 0.3 else "None"
+            predicted_exercise.append(categories[prediction] if predictions[0][prediction] > 0.5 else "None")
+
+            if len(predicted_exercise) == 3:
+                predicted_exercise = predicted_exercise[1:]
+
+            # ottengo l'esercizio presente piu volte in predicted_exercise
+            effective_exercise = max(set(predicted_exercise), key=predicted_exercise.count)
 
             # Azzero le ripetizioni se l'esercizio predetto cambia
-            if predicted_exercise != last_predicted_exercise:
+            if effective_exercise != last_predicted_exercise:
                 repetitions.reset()
 
-            last_predicted_exercise = predicted_exercise
+            last_predicted_exercise = effective_exercise
             frames = frames[int(util.getWindowSize()/2):]
 
         # Aggiorno le ripetizioni
-        repetitions.update2(frames[-1])
+        repetitions.update(frames[-1])
 
         # Disegna il nome dell'esercizio sulla frame
-        cv2.putText(frame, f'Exercise: {predicted_exercise} ({repetitions.get_category_rep(predicted_exercise) if predicted_exercise is not "None" else 0})', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(frame, f'Exercise: {effective_exercise} ({repetitions.get_category_rep(effective_exercise) if effective_exercise is not "None" else 0})', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
         # Mostra il frame con i keypoints
         cv2.imshow('Mediapipe Pose Estimation', frame)
