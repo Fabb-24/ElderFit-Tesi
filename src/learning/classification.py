@@ -57,7 +57,7 @@ def classify(model_path):
             # Eseguo la predizione
             predictions = model.predict([X1, X2, X3], verbose=0)
             prediction = np.argmax(predictions, axis=1)[0]
-            predicted_exercise.append(categories[prediction] if predictions[0][prediction] > 0.5 else "None")
+            predicted_exercise.append(categories[prediction] if predictions[0][prediction] > 0.7 else "None")
 
             if len(predicted_exercise) == 3:
                 predicted_exercise = predicted_exercise[1:]
@@ -76,7 +76,7 @@ def classify(model_path):
         repetitions.update(frames[-1])
 
         # Disegna il nome dell'esercizio sulla frame
-        cv2.putText(frame, f'Exercise: {effective_exercise} ({repetitions.get_category_rep(effective_exercise) if effective_exercise is not "None" else 0})', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(frame, f'Exercise: {effective_exercise} ({repetitions.get_category_rep(effective_exercise) if effective_exercise != "None" else 0})', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
         # Mostra il frame con i keypoints
         cv2.imshow('Mediapipe Pose Estimation', frame)
