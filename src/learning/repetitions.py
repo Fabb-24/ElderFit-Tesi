@@ -4,8 +4,14 @@ import util
 from data.videoParams import VideoParams as vp
 
 class Repetitions:
+    """
+    Classe che si occupa di riconoscere e contare le ripetizioni di tutti gli esercizi.
+    """
 
     def __init__(self):
+        """
+        Costruttore della classe.
+        """
         self.category_rep = {}
         self.parameters = {}
         self.reset()
@@ -14,15 +20,15 @@ class Repetitions:
 
     def reset(self):
         """
-        Funzione che azzera i contatori delle ripetizioni per ogni categoria.
+        Funzione che azzera i contatori delle ripetizioni per ogni categoria e stabilisce le tolleranze per il riconoscimento dell'inizio e della fine di un esercizio.
         """
 
         self.category_rep = {
             'arms_extension': {
                 'count': 0,
                 'state': 'start',
-                'tollerance_start': 20,
-                'tollerance_end': 20
+                'tollerance_start': 30,
+                'tollerance_end': 15
             },
             'arms_up': {
                 'count': 0,
@@ -33,7 +39,7 @@ class Repetitions:
             'chair_raises': {
                 'count': 0,
                 'state': 'start',
-                'tollerance_start': 30,
+                'tollerance_start': 35,
                 'tollerance_end': 15
             },
             'lateral_raises': {
@@ -77,38 +83,40 @@ class Repetitions:
         """
 
         for category in self.category_rep:
-            params_type = vp.get_category_parameters(category)["type"]
-            params_points = vp.get_category_parameters(category)["points"]
-            params_start = vp.get_category_parameters(category)["start"]
+            category_type = vp.get_category_parameters(category)["type"]
+            category_points = vp.get_category_parameters(category)["points"]
+            category_start = vp.get_category_parameters(category)["start"]
 
-            if params_start == 'min':
-                #near_interval = ((self.parameters[category][0]["end"] - self.parameters[category][0]["start"]) / 100) * 20
-                interval = self.parameters[category][0]["end"] - self.parameters[category][0]["start"]
-                near_start = self.parameters[category][0]["start"] + interval/100 * self.category_rep[category]["tollerance_start"]
-                near_end = self.parameters[category][0]["end"] - interval/100 * self.category_rep[category]["tollerance_end"]
-            elif params_start == 'max':
-                #near_interval = ((self.parameters[category][0]["start"] - self.parameters[category][0]["end"]) / 100) * 20
-                interval = self.parameters[category][0]["start"] - self.parameters[category][0]["end"]
-                near_start = self.parameters[category][0]["start"] - interval/100 * self.category_rep[category]["tollerance_start"]
-                near_end = self.parameters[category][0]["end"] + interval/100 * self.category_rep[category]["tollerance_end"]
+            rep_conditions_start = []
+            rep_conditions_end = []
+            for i in range(len(self.parameters[category])):
+                parameters_info = {}
+                if category_start == 'min':
+                    interval = self.parameters[category][i]["end"] - self.parameters[category][i]["start"]
+                    parameters_info = {
+                        'near_start': self.parameters[category][i]["start"] + interval/100 * self.category_rep[category]["tollerance_start"],
+                        'near_end': self.parameters[category][i]["end"] - interval/100 * self.category_rep[category]["tollerance_end"]
+                    }
+                else:
+                    interval = self.parameters[category][i]["start"] - self.parameters[category][i]["end"]
+                    parameters_info = {
+                        'near_start': self.parameters[category][i]["start"] - interval/100 * self.category_rep[category]["tollerance_start"],
+                        'near_end': self.parameters[category][i]["end"] + interval/100 * self.category_rep[category]["tollerance_end"]
+                    }
+                
+                if category_type == 'distance':
+                    value = util.calculate_distance(vp.extract_points(frame, category_points[i][0]), vp.extract_points(frame, category_points[i][1])) / util.calculate_distance(vp.extract_points(frame, 1), vp.extract_points(frame, 7))
+                else:
+                    value = util.calculate_angle(vp.extract_points(frame, category_points[i][0]), vp.extract_points(frame, category_points[i][1]), vp.extract_points(frame, category_points[i][2]))
 
-            if params_type == 'distance':
-                #value = util.calculate_distance(frame.get_keypoint(params_points[0][0]), frame.get_keypoint(params_points[0][1])) / util.calculate_distance(frame.get_keypoint(1), frame.get_keypoint(7))
-                value = util.calculate_distance(vp.extract_points(frame, params_points[0][0]), vp.extract_points(frame, params_points[0][1])) / util.calculate_distance(vp.extract_points(frame, 1), vp.extract_points(frame, 7))
-            elif params_type == 'angle':
-                #value = util.calculate_angle(frame.get_keypoint(params_points[0][0]), frame.get_keypoint(params_points[0][1]), frame.get_keypoint(params_points[0][2]))
-                value = util.calculate_angle(vp.extract_points(frame, params_points[0][0]), vp.extract_points(frame, params_points[0][1]), vp.extract_points(frame, params_points[0][2]))
+                rep_conditions_start.append((self.category_rep[category]["state"] == 'start') and ((category_start == 'min' and value > parameters_info['near_end']) or (category_start == 'max' and value < parameters_info['near_end'])))
+                rep_conditions_end.append((self.category_rep[category]["state"] == 'end') and ((category_start == 'min' and value < parameters_info['near_start']) or (category_start == 'max' and value > parameters_info['near_start'])))
 
-            '''if category == "chair_raises":
-                print(f"Value: {value}, Near start: {near_start}, Near end: {near_end}")'''
-
-            if self.category_rep[category]["state"] == 'start':
-                if (params_start == 'min' and value > near_end) or (params_start == 'max' and value < near_end):
-                    self.category_rep[category]["state"] = 'end'
-            if self.category_rep[category]["state"] == 'end':
-                if (params_start == 'min' and value < near_start) or (params_start == 'max' and value > near_start):
-                    self.category_rep[category]["state"] = 'start'
-                    self.category_rep[category]["count"] += 1
+            if any(rep_conditions_start):
+                self.category_rep[category]["state"] = 'end'
+            elif any(rep_conditions_end):
+                self.category_rep[category]["state"] = 'start'
+                self.category_rep[category]["count"] += 1
 
     
     # FUNZIONI GET E SET

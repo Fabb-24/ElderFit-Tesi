@@ -65,7 +65,7 @@ def classify(model_path):
             frames = frames[int(util.getWindowSize()/2):]
 
         # Aggiorno le ripetizioni
-        repetitions.update(frames[-1])
+        repetitions.update2(frames[-1])
 
         # Disegna il nome dell'esercizio sulla frame
         cv2.putText(frame, f'Exercise: {predicted_exercise} ({repetitions.get_category_rep(predicted_exercise) if predicted_exercise is not "None" else 0})', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)

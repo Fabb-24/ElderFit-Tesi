@@ -87,7 +87,6 @@ class VideoParams:
         for point in points:
             param = []
             for frame in self.frames:
-                #param.append(util.calculate_distance(frame.get_keypoint(point[0]), frame.get_keypoint(point[1])) / util.calculate_distance(frame.get_keypoint(1), frame.get_keypoint(7)))
                 param.append(util.calculate_distance(self.extract_points(frame, point[0]), self.extract_pints(frame, point[1])) / util.calculate_distance(self.extract_pints(frame, 1), self.extract_pints(frame, 7)))
             self.params.append(param)
         
@@ -106,19 +105,6 @@ class VideoParams:
             self.params.append(param)
 
 
-    @staticmethod
-    def extract_points(frame, p):
-        if type(p) == int:
-            return frame.get_keypoint(p)
-        else:
-            a = p[0]
-            b = p[1]
-            return {
-                'x': (frame.get_keypoint(a)['x'] + frame.get_keypoint(b)['x']) / 2,
-                'y': (frame.get_keypoint(a)['y'] + frame.get_keypoint(b)['y']) / 2
-            }
-
-
     def process_parameters(self):
         """
         Funzione che trova i valori di inizio e fine esercizio.
@@ -132,7 +118,6 @@ class VideoParams:
         processed_params = []
 
         for i in range(len(self.params)):
-            #max_peaks, min_peaks = self.find_peaks(self.params[i])
             # prendo i 5 valori piu alti e i 5 valori piu bassi da self.params[i]
             max_values = sorted(self.params[i], reverse=True)[:5]
             min_values = sorted(self.params[i])[:5]
@@ -148,42 +133,31 @@ class VideoParams:
                 })
 
         return processed_params
+    
 
-
-    '''def find_peaks(self, params):
+    @staticmethod
+    def extract_points(frame, p):
         """
-        Funzione che trova i picchi massimi e minimi nella sequenza di parametri.
+        Funzione statica che restituisce il punto p-esimo del frame.
+        Se il punto è una tupla, restituisce il punto medio tra i due punti.
 
         Args:
-        - params (Array): sequenza di parametri
+        - frame (Frame): frame da cui estrarre il punto
+        - p (int, Tuple): punto
 
         Returns:
-        - max_peaks (Array): picchi massimi
-        - min_peaks (Array): picchi minimi
+        - point (dict): punto
         """
-
-        max_peaks = []
-        min_peaks = []
-        peak_distance = 0
-        max_distance = 4
-
-        for i in range(1, len(params) - 1):
-            if params[i] > params[i - 1] and params[i] > params[i + 1]:
-                if peak_distance > max_distance or len(max_peaks) == 0:
-                    max_peaks.append(i)
-                else:
-                    max_peaks[-1] = (max_peaks[-1] + i) / 2
-                peak_distance = 0
-            elif params[i] < params[i - 1] and params[i] < params[i + 1]:
-                if peak_distance > max_distance or len(min_peaks) == 0:
-                    min_peaks.append(i)
-                else:
-                    min_peaks[-1] = (min_peaks[-1] + i) / 2
-                peak_distance = 0
-            else:
-                peak_distance += 1
-
-        return max_peaks, min_peaks'''
+        
+        if type(p) == int:
+            return frame.get_keypoint(p)
+        else:
+            a = p[0]
+            b = p[1]
+            return {
+                'x': (frame.get_keypoint(a)['x'] + frame.get_keypoint(b)['x']) / 2,
+                'y': (frame.get_keypoint(a)['y'] + frame.get_keypoint(b)['y']) / 2
+            }
     
 
     # FUNZIONI GET E SET
