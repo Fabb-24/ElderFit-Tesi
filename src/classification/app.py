@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 import os
 import threading
 import cv2
+import numpy as np
 
 from data.dataset import Dataset
 from learning.models_pytorch import create_model
@@ -300,11 +301,64 @@ class GUI:
         keypoint_checkbox = tk.Checkbutton(frame_keypoint, variable=self.keypoint_var, command=self.on_choice_keypoints)
         keypoint_checkbox.grid(row=0, column=1, sticky="e", padx=5)
 
+        # titolo lista esercizi
+        exercises_title = tk.Label(right_frame_classification, text="Exercises tutorial", font=("Arial", 20, "bold"))
+        exercises_title.grid(row=6, column=0, pady=(20, 10), sticky="ew")
+
+        # lista scorrevole degli esercizi
+        exercises = np.load(os.path.join(util.getDatasetPath(), "categories.npy"))        
+        self.exercises_list = tk.Listbox(right_frame_classification, font=("Arial", 16), selectmode="single", height=10)
+        for exercise in exercises:
+            self.exercises_list.insert(tk.END, exercise.replace("_", " "))
+        self.exercises_list.grid(row=7, column=0, pady=(0, 20), sticky="nsew")
+        self.exercises_list.selection_set(0)
+
+        # frame per i pulsanti
+        frame_buttons = tk.Frame(right_frame_classification)
+        frame_buttons.grid(row=8, column=0, pady=(0, 10), sticky="nsew")
+        frame_buttons.columnconfigure(0, weight=1)
+        frame_buttons.columnconfigure(1, weight=1)
+
+        button_style = ttk.Style()
+        button_style.configure("ModelButtons.TButton", font=("Arial", 14))
+
+        # pulsante per chiudere la finestra
+        close_button = ttk.Button(frame_buttons, text="Back", command=self.close_classification_window, image=self.icon_model_back, compound="left")
+        close_button.image = self.icon_model_back
+        close_button.grid(row=0, column=0, sticky="ew", padx=5)
+        close_button.config(style="ModelButtons.TButton")
+
+        # pulsante per visualizzare il tutorial dell'esercizio selezionato
+        tutorial_button = ttk.Button(frame_buttons, text="Show tutorial", image=self.icon_model_start, compound="left", command=self.show_video_tutorial)
+        tutorial_button.image = self.icon_model_start
+        tutorial_button.grid(row=0, column=1, sticky="ew", padx=5)
+        tutorial_button.config(style="ModelButtons.TButton")        
+
         # Inizializzazione della webcam
         self.cap = cv2.VideoCapture(self.cameras[0])
         self.webcam_menu.bind("<<ComboboxSelected>>", self.on_webcam_selected)
         # Aggiorno la webcam
         self.detection()
+
+
+    def show_video_tutorial(self):
+        exercise = self.exercises_list.get(self.exercises_list.curselection()).replace(" ", "_")
+        tutorial_path = os.path.join(util.getVideoInfoPath(), f"{exercise}.mp4")
+        cap_tutorial = cv2.VideoCapture(tutorial_path)
+        while True:
+            ret, frame = cap_tutorial.read()
+            if ret:
+                # Scritta per indicare come chiudere la finestra
+                cv2.putText(frame, "Press 'q' to close the window", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+
+                cv2.imshow("Tutorial", frame)
+
+                if cv2.waitKey(25) & 0xFF == ord('q'):
+                    break
+            else:
+                break
+        cap_tutorial.release()
+        cv2.destroyAllWindows()
 
     
     def close_classification_window(self):
@@ -462,10 +516,6 @@ class GUI:
             self.model_title.config(text="Interrupting the process...")
             self.model_thread_interrupted = True
             pass
-
-root = tk.Tk()
-app = GUI(root)
-root.mainloop()
 
 def start_application():
     """
