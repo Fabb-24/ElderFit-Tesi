@@ -4,6 +4,9 @@ import numpy as np
 import mediapipe as mp
 import tensorflow as tf
 import tensorflow_hub as hub
+import torch
+
+from learning.models_pytorch import MultiInputLSTM
 
 load_dotenv()
 
@@ -11,7 +14,8 @@ load_dotenv()
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
-movenet = hub.load("https://tfhub.dev/google/movenet/singlepose/lightning/4")
+#movenet = hub.load("https://tfhub.dev/google/movenet/singlepose/lightning/4")
+#movenet = hub.load("https://www.kaggle.com/models/google/movenet/frameworks/TensorFlow2/variations/singlepose-lightning/versions/4")
 
 
 def getExerciseCategories():
@@ -96,6 +100,92 @@ def concatenate_features(features1, features2):
     return np.concatenate([features1, features2], axis=2)
 
 
+def normalize(features):
+    """
+    Funzione che normalizza un insieme di features.
+
+    Args:
+    - features (numpy.ndarray): L'insieme di features da normalizzare.
+
+    Returns:
+    - normalized_features (numpy.ndarray): Le features normalizzate.
+    """
+
+    min_val = np.min(features)
+    max_val = np.max(features)
+    return (features - min_val) / (max_val - min_val)
+
+
+def same_frame(frame1, frame2, threshold=0.08):
+    """
+    Funzione che riceve in input 2 frame e restituisce True se i keypoints sono molto simili tra loro e False altrimenti.
+    La somiglianza è gestita da un valore di soglia.
+    """
+
+    keypoints1 = frame1.get_keypoints()
+    keypoints2 = frame2.get_keypoints()
+    if len(keypoints1) != len(keypoints2):
+        return False
+    for i in range(len(keypoints1)):
+        if abs(keypoints1[i]["x"] - keypoints2[i]["x"]) > threshold or abs(keypoints1[i]["y"] - keypoints2[i]["y"]) > threshold:
+            return False
+    return True
+
+
+def get_pytorch_model(model_path):
+    """
+    Funzione che estrae i migliori iperparametri dal file e crea il modello PyTorch.
+
+    Args:
+    - model_path (string): percorso del modello
+
+    Returns:
+    - model (nn.Module): modello PyTorch
+    """
+
+    best_params = np.load(os.path.join(getModelsPath(), "best_params.npy"), allow_pickle=True).item()
+    model = MultiInputLSTM(
+        best_params['X1_size'], best_params['X2_size'], best_params['X3_size'],
+        best_params['hidden_size_1'], best_params['hidden_size_2'], best_params['hidden_size_3'],
+        best_params['num_classes'], best_params['dropout_rate'])
+    model.load_state_dict(torch.load(model_path))
+    model.eval()
+    return model
+
+
+def get_dataset(type):
+    """
+    Funzione che restituisce il dataset di train o di test.
+
+    Args:
+    - type (string): tipo di dataset da restituire ("train" o "test")
+
+    Returns:
+    - X1 (numpy.ndarray): dati dei keypoints
+    - X2 (numpy.ndarray): dati dell'optical flow
+    - X3 (numpy.ndarray): dati degli angoli
+    - y (numpy.ndarray): etichette
+    """
+
+    if type == "train":
+        dataset_path = getDatasetPath()
+    elif type == "test":
+        dataset_path = getDatasetTestPath()
+    else:
+        return None
+    
+    X1 = np.load(os.path.join(dataset_path, "keypoints.npy"))
+    X2 = np.load(os.path.join(dataset_path, "opticalflow.npy"))
+    X3 = np.load(os.path.join(dataset_path, "angles.npy"))
+    y = np.load(os.path.join(dataset_path, "labels.npy"))
+    num_classes = len(np.unique(y))
+    categories = np.load(os.path.join(dataset_path, "categories.npy"))
+    y = np.array([list(categories).index(label) for label in y])
+
+    return X1, X2, X3, y, num_classes
+
+
+
 # ================================================================== #
 # ================ FUNZIONI PER IL RECUPERO DEI PATH =============== #
 # ================================================================== #
@@ -123,6 +213,17 @@ def getVideoPath():
     return os.path.join(getBasePath(), os.getenv("VIDEO_PATH"))
 
 
+def getVideoInfoPath():
+    """
+    Funzione che restituisce il percorso della cartella dei video informativi
+
+    Returns:
+        str: il percorso della cartella delle informazioni sui video
+    """
+
+    return os.path.join(getBasePath(), os.getenv("VIDEO_INFO_PATH"))
+
+
 def getDatasetPath():
     """
     Funzione che restituisce il percorso della cartella del dataset
@@ -131,7 +232,18 @@ def getDatasetPath():
         str: il percorso della cartella del dataset
     """
 
-    return os.path.join(getBasePath(), os.getenv("DATASET_PATH"))
+    return os.path.join(getBasePath(), "dataset", os.getenv("DATASET_TRAIN_PATH"))
+
+
+def getDatasetTestPath():
+    """
+    Funzione che restituisce il percorso della cartella del dataset di test
+
+    Returns:
+        str: il percorso della cartella del dataset di test
+    """
+
+    return os.path.join(getBasePath(), "dataset", os.getenv("DATASET_TEST_PATH"))
 
 
 def getModelsPath():
@@ -153,7 +265,7 @@ def getParametersPath():
         str: il percorso della cartella dei parametri
     """
 
-    return os.path.join(getBasePath(), os.getenv("PARAMETERS_PATH"))
+    return os.path.join(getBasePath(), "dataset", os.getenv("PARAMETERS_PATH"))
 
 
 def getWindowSize():

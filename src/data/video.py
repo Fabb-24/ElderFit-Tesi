@@ -10,35 +10,49 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Video:
+    """
+    Classe che rappresenta un video. Un video è composto da una serie di finestre, ognuna delle quali contiene una serie di frame.
+    """
 
     def __init__(self, path, category):
+        """
+        Costruttore della classe Video
+
+        Args:
+        - path (string): percorso del video
+        - category (string): categoria del video
+        """
+
         self.windows = None
         self.path = path
         self.category = category
         self.parameters = None
         self.extract_values()
 
+
     def extract_values(self):
         """
-        Funzione che suddivide il video in finestre ed estrae i keypoints, gli angoli e l'opticalflow di ogni finestra
+        Funzione che suddivide il video in finestre ed estrae i keypoints, gli angoli e l'opticalflow di ogni finestra e i parametri del video.
         """
 
         cap = cv2.VideoCapture(self.path)
         frames = []
 
-        while True:
-            # Ottengo il frame corrente
+        while True:  # Leggo tutti i frame del video e li salvo in un array se hanno un certo livello di differenza con il frame precedente
             ret, frame = cap.read()
             if not ret:
                 break
 
-            frames.append(Frame(frame))
+            f = Frame(frame)
+            if len(frames) == 0 or not util.same_frame(frames[-1], f, threshold=0.01):
+                frames.append(f)
 
+        # Divido tutti i frame in finestre di 15 frame con sovrapposizione di 14 frame
         self.windows = [Window([frames[i:i + util.getWindowSize()]]) for i in range(len(frames) - util.getWindowSize() + 1)]
 
         opticalflow = []
 
-        for i in range(len(frames)):
+        for i in range(len(frames)):  # Estraggo keypoints, angoli e opticalflow di ogni frame
             frames[i].interpolate_keypoints(frames[i - 1] if i > 0 else None, frames[i + 1] if i < len(frames) - 1 else None)
             frames[i].extract_angles()
             if i > 0:
@@ -46,11 +60,12 @@ class Video:
             else:
                 opticalflow.append(np.zeros((Frame.num_opticalflow_data,)))
 
-        for i in range(len(self.windows)):
+        for i in range(len(self.windows)):  # Aggiorno i valori di keypoints, angoli e opticalflow di ogni finestra
             self.windows[i].set_keypoints(np.array([frames[j].process_keypoints() for j in range(i, i + 15)]))
             self.windows[i].set_angles(np.array([frames[j].process_angles() for j in range(i, i + 15)]))
             self.windows[i].set_opticalflow(np.array(opticalflow[i:i + util.getWindowSize()]))
 
+        # Estraggo i parametri del video
         params = VideoParams(frames, self.category)
         params.extract_parameters()
         self.parameters = params.process_parameters()

@@ -1,6 +1,16 @@
 class Window:
+    """
+    Classe che rappresenta una finestra temporale di frames.
+    """
 
     def __init__(self, frames):
+        """
+        Costruttore della classe.
+
+        Args:
+        - frames (Array): array di frame
+        """
+
         self.frames = frames
         self.keypoints = None
         self.angles = None

@@ -1,35 +1,46 @@
 import math
 import cv2
 import numpy as np
-import mediapipe as mp
 import util
 
 class Frame:
+    """
+    Classe che rappresenta un frame di un video.
+    """
+
+    # Quantità di dati facenti parte del dataset per ogni feature
     num_keypoints_data = 36
     num_opticalflow_data = 24
     num_mediapipe_keypoints = 33
+
     angleDict = {  # angoli utili alla predizione
-        'angl_left_elbow': [5, 3, 1],
-        'angl_right_elbow': [2, 4, 6],
-        'angl_left_shoulder': [3, 1, 7],
-        'angl_right_shoulder': [8, 2, 4],
-        'angl_left_hip': [1, 7, 9],
-        'angl_right_hip': [2, 8, 10],
-        'angl_left_knee': [7, 9, 11],
-        'angl_right_knee': [8, 10, 12]
+        'left_elbow': [5, 3, 1],
+        'right_elbow': [2, 4, 6],
+        'left_shoulder': [3, 1, 7],
+        'right_shoulder': [8, 2, 4],
+        'left_hip': [1, 7, 9],
+        'right_hip': [2, 8, 10],
+        'left_knee': [7, 9, 11],
+        'right_knee': [8, 10, 12]
     }
-    # keypoints utili alla predizione
-    keypoints_list = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
+
+    keypoints_list = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]  # keypoints utili alla predizione
+
 
     def __init__(self, frame):
         """
         Costruttore della classe che inizializza gli attributi
+
+        Args:
+        - frame (numpy.ndarray): il frame del video
         """
         self.keypoints = None  # keypoints estratti dal frame
         self.angles = None  # angoli estratti dal frame
         self.frame = frame  # frame
+        self.mediapipe_landmarks = []  # landmarks estratti dal frame
 
         self.extract_keypoints()
+
 
     def extract_keypoints(self):
         """
@@ -42,40 +53,29 @@ class Frame:
             image.flags.writeable = False
             # Estrazione dei keypoints
             results = pose.process(image)
+            # salvataggio dei landmarks necessari
+            if results.pose_landmarks:
+                for i in range(len(results.pose_landmarks.landmark)):
+                    if i in Frame.keypoints_list:
+                        self.mediapipe_landmarks.append(results.pose_landmarks.landmark[i])
+                    else:
+                        self.mediapipe_landmarks.append(None)
 
-            # Creao un array dove ogni elemento rappresenta un keypoint di mediapipe
-            # Ogni keypoint è un array di 4 elementi: coordinate x, y, z del punto e visibilità
+            # Creo un array dove ogni elemento rappresenta un keypoint di mediapipe e ogni keypoints è un dizionario con coordinate e visibilità
             points = [None] * Frame.num_mediapipe_keypoints
             for i in range(Frame.num_mediapipe_keypoints):
                 try:
-                    if i < len(results.pose_landmarks.landmark):
+                    if i < len(results.pose_landmarks.landmark):  # se il punto è rilevato
                         landmark = results.pose_landmarks.landmark[i]
-                        #points[i] = [landmark.x, landmark.y, landmark.z, landmark.visibility]
-                        points[i] = {
-                            "x": landmark.x,
-                            "y": landmark.y,
-                            "z": landmark.z,
-                            "visibility": landmark.visibility,
-                        }
-                    else:
-                        #points[i] = [0.0, 0.0, 0.0, 0.0]  # valori di default se il punto non è rilevato
-                        points[i] = {
-                            "x": 0.0,
-                            "y": 0.0,
-                            "z": 0.0,
-                            "visibility": 0.0,
-                        }
-                except:
-                    #points[i] = [0.0, 0.0, 0.0, 0.0]
-                    points[i] = {
-                        "x": 0.0,
-                        "y": 0.0,
-                        "z": 0.0,
-                        "visibility": 0.0,
-                    }
+                        points[i] = {"x": landmark.x, "y": landmark.y, "z": landmark.z, "visibility": landmark.visibility}
+                    else:  # valori di default se il punto non è rilevato
+                        points[i] = {"x": 0.0, "y": 0.0, "z": 0.0, "visibility": 0.0}
+                except:  # valori di default in caso di errore nella rilevazione del punto
+                    points[i] = {"x": 0.0, "y": 0.0, "z": 0.0, "visibility": 0.0}
 
             # Prendo in considerazione solo i keypoints necessari salvandoli nell'attributo keypoints
             self.keypoints = np.array([points[i] for i in range(Frame.num_mediapipe_keypoints) if i in Frame.keypoints_list])
+
 
     def extract_angles(self):
         """
@@ -87,10 +87,10 @@ class Frame:
             angle_keypoints = Frame.angleDict[angle]
             angle = util.calculate_angle(self.keypoints[angle_keypoints[0]], self.keypoints[angle_keypoints[1]], self.keypoints[angle_keypoints[2]])
             angles.append(angle)
-
         self.angles = angles
 
-    def extract_opticalflow(self, prev_frame, area_size=5):
+
+    def extract_opticalflow(self, prev_frame, area_size=50):
         """
         Funzione che estrae il flusso ottico tra due frame.
         Viene estratto il flusso ottico per ogni area di dimensione area_size x area_size intorno ai keypoints.
@@ -112,9 +112,10 @@ class Frame:
         for i in range(1, len(self.keypoints)):
             kp = self.keypoints[i]
             # ottengo le coordinate del keypoints e calcolo le coordinate dell'area intorno al keypoints
-            x, y = int(kp["x"]), int(kp["y"])
-            x1, y1 = max(0, x - area_size // 2), max(0, y - area_size // 2)
-            x2, y2 = min(current_gray.shape[1], x + area_size // 2), min(current_gray.shape[0], y + area_size // 2)
+            x = max(min(int(kp["x"] * prev_gray.shape[1]), prev_gray.shape[1] - 1), 1)
+            y = max(min(int(kp["y"] * prev_gray.shape[0]), prev_gray.shape[0] - 1), 1)
+            x1, y1 = max(1, x - area_size // 2), max(1, y - area_size // 2)
+            x2, y2 = min(current_gray.shape[1] - 1, x + area_size // 2), min(current_gray.shape[0] - 1, y + area_size // 2)
             # calcolo il flusso ottico nell'area intorno al keypoints
             flow = cv2.calcOpticalFlowFarneback(prev_gray[y1:y2, x1:x2], current_gray[y1:y2, x1:x2], None, 0.5, 3, 15, 3, 5, 1.2, 0)
             flow_vector = np.mean(flow, axis=(0, 1))
@@ -124,6 +125,7 @@ class Frame:
         flow_vectors = np.array(flow_vectors)
         flow_vectors = flow_vectors.flatten()
         return np.array(flow_vectors)
+
 
     def interpolate_keypoints(self, prev_frame, next_frame, treshold=0.3):
         """
@@ -135,13 +137,14 @@ class Frame:
         - treshold (float): La soglia di confidence sotto la quale i keypoints vengono interpolati
         """
 
+        # Interpolo i keypoints con confidence al di sotto della soglia treshold
         for i in range(0, len(self.keypoints)):
             curr_kp = self.keypoints[i]
             if curr_kp["visibility"] < treshold:
-                if prev_frame is not None and next_frame is not None:
+                if prev_frame is not None and next_frame is not None:  # Se i frame precedente e successivo sono disponibili eseguo l'interpolazione
                     prev_kp = prev_frame.get_keypoint(i)
                     next_kp = next_frame.get_keypoint(i)
-                    if prev_kp["visibility"] >= treshold and next_kp["visibility"] >= treshold:
+                    if prev_kp["visibility"] >= treshold and next_kp["visibility"] >= treshold:  # Eseguo l'interpolazione se i keypoints sono visibili nei frame
                         self.keypoints[i]["x"] = (prev_kp["x"] + next_kp["x"]) / 2
                         self.keypoints[i]["y"] = (prev_kp["y"] + next_kp["y"]) / 2
                         self.keypoints[i]["z"] = (prev_kp["z"] + next_kp["z"]) / 2
@@ -156,7 +159,7 @@ class Frame:
                         self.keypoints[i]["y"] = next_kp["y"]
                         self.keypoints[i]["z"] = next_kp["z"]
                         self.keypoints[i]["visibility"] = next_kp["visibility"]
-                else:
+                else:  # Se non sono disponibili frame precedente e successivo imposto i keypoints a 0
                     self.keypoints[i]["x"] = 0.0
                     self.keypoints[i]["y"] = 0.0
                     self.keypoints[i]["z"] = 0.0
@@ -175,12 +178,6 @@ class Frame:
 
         kp_copy = self.keypoints.copy()
 
-        # Trasforma le coordinate x e y di ogni punto in coordinate rispetto al punto a metà tra i fianchi
-        '''for i in range(0, len(kp_copy)):
-            kp_copy[i]["x"] -= (kp_copy[7]["x"] + kp_copy[8]["x"]) / 2
-            kp_copy[i]["y"] -= (kp_copy[7]["y"] + kp_copy[8]["y"]) / 2
-            kp_copy[i]["z"] -= (kp_copy[7]["z"] + kp_copy[8]["z"]) / 2'''
-
         # Trasforma le coordinate x e y di ogni punto in coordinate rispetto al keypoint 0
         for i in range(1, len(kp_copy)):
             kp_copy[i]["x"] -= kp_copy[0]["x"]
@@ -198,11 +195,7 @@ class Frame:
         
         # Elimino il punto 0 rendendo l'array di dimensione (12, 4)
         processed_keypoints = np.delete(kp, 0, axis=0)
-        '''# Normalizzo le coordinate x e y in base alla lunghezza del corpo (altezza del busto con mediapipe)
-        processed_keypoints = np.array(processed_keypoints)
-        processed_keypoints[:, 0] /= np.linalg.norm(processed_keypoints[1] - processed_keypoints[7])
-        processed_keypoints[:, 1] /= np.linalg.norm(processed_keypoints[1] - processed_keypoints[7])
-        processed_keypoints[:, 2] /= np.linalg.norm(processed_keypoints[1] - processed_keypoints[7])'''
+
         # Normalizzo le coordinate x e y in base alla lunghezza del corpo (distanza tra i fianchi)
         norm = math.sqrt((kp_copy[7]["x"] - kp_copy[8]["x"])**2 + (kp_copy[7]["y"] - kp_copy[8]["y"])**2)
         for i in range(len(kp) - 1):
@@ -210,6 +203,7 @@ class Frame:
             processed_keypoints[i][1] /= norm if norm != 0 else 1
             processed_keypoints[i][2] /= norm if norm != 0 else 1
         processed_keypoints = np.array(processed_keypoints)
+
         # Elimino da ogni punto la visibility rendendo l'array di dimensione (12, 3)
         processed_keypoints = np.delete(processed_keypoints, 3, axis=1)
         # Rendo l'array keypoints da dimensione (12, 3) a (36, 1)
@@ -270,3 +264,13 @@ class Frame:
         """
 
         return self.frame
+    
+    def get_landmarks(self):
+        """
+        Funzione che restituisce i landmarks.
+
+        Returns:
+        - landmarks: i landmarks
+        """
+
+        return self.mediapipe_landmarks

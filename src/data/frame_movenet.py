@@ -1,6 +1,6 @@
+import math
 import cv2
 import numpy as np
-import mediapipe as mp
 import util
 import tensorflow as tf
 
@@ -181,13 +181,19 @@ class Frame:
             kp[i][0] = kp_copy[i]["x"]
             kp[i][1] = kp_copy[i]["y"]
             kp[i][2] = kp_copy[i]["visibility"]
-        # Elimino il punto 0 rendendo l'array di dimensione (12, 4)
+        # Elimino il punto 0 rendendo l'array di dimensione (12, 3)
         processed_keypoints = np.delete(kp, 0, axis=0)
-        # Normalizzo le coordinate x e y in base alla lunghezza del corpo (altezza del busto con mediapipe)
+        '''# Normalizzo le coordinate x e y in base alla lunghezza del corpo (altezza del busto con mediapipe)
         processed_keypoints = np.array(processed_keypoints)
         processed_keypoints[:, 0] /= np.linalg.norm(processed_keypoints[1] - processed_keypoints[7])
-        processed_keypoints[:, 1] /= np.linalg.norm(processed_keypoints[1] - processed_keypoints[7])
-        # Elimino da ogni punto la visibility rendendo l'array di dimensione (12, 3)
+        processed_keypoints[:, 1] /= np.linalg.norm(processed_keypoints[1] - processed_keypoints[7])'''
+        # Normalizzo le coordinate x e y in base alla lunghezza del corpo (distanza tra i fianchi)
+        norm = math.sqrt((kp_copy[7]["x"] - kp_copy[8]["x"])**2 + (kp_copy[7]["y"] - kp_copy[8]["y"])**2)
+        for i in range(len(kp) - 1):
+            processed_keypoints[i][0] /= norm if norm != 0 else 1
+            processed_keypoints[i][1] /= norm if norm != 0 else 1
+        processed_keypoints = np.array(processed_keypoints)
+        # Elimino da ogni punto la visibility rendendo l'array di dimensione (12, 2)
         processed_keypoints = np.delete(processed_keypoints, 2, axis=1)
         # Rendo l'array keypoints da dimensione (12, 2) a (24, 1)
         processed_keypoints = processed_keypoints.flatten()
