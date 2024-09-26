@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import optuna
 import util
@@ -12,6 +13,10 @@ import util
 
 # Dispositivo su cui eseguire il training: GPU se disponibile, altrimenti CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+writer = SummaryWriter()
+
+best_accuracy = 0.0
 
 
 class EarlyStopping:
@@ -109,6 +114,8 @@ class MultiInputLSTM(nn.Module):
         self.dropout2_3 = nn.Dropout(dropout_rate)
         
         self.fc1 = nn.Linear(hidden_size_2 * 3, hidden_size_3)
+        self.relu = nn.ReLU()
+        self.dropout_4 = nn.Dropout(dropout_rate)
         self.fc2 = nn.Linear(hidden_size_3, num_classes)
         self.sigmoid = nn.Sigmoid()
 
@@ -159,6 +166,8 @@ class MultiInputLSTM(nn.Module):
         concatenated = torch.cat((out1, out2, out3), 1)
         out = self.fc1(concatenated)
         out = torch.nn.functional.relu(out)
+        out = self.relu(out)
+        out = self.dropout_4(out)
         out = self.fc2(out)
         out = self.sigmoid(out)
         return out
@@ -213,7 +222,7 @@ class CustomDataset(Dataset):
     
 
 
-def train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, num_epochs=20, patience=5):
+def train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, num_epochs=20, patience=5, trial=None):
     """
     Funzione che addestra un modello.
 
@@ -258,6 +267,9 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
             optimizer.step()  # Aggiornamento dei pesi
             epoch_loss += loss.item()  # Aggiornamento della loss
 
+        writer.add_scalar('Loss/train', epoch_loss / len(train_loader), epoch)  # Scrittura della loss di training su TensorBoard
+        writer.add_graph(model, (X1_batch, X2_batch, X3_batch))
+
         print(f"\nEpoch {epoch + 1}/{num_epochs}\nTraining Loss: {epoch_loss / len(train_loader):.4f}")  # Stampa della loss di training
 
         # Validation
@@ -296,14 +308,20 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
             print("\nEarly stopping")
             break
 
+        '''if trial is not None:
+            trial.report(avg_val_loss, step=epoch)
+            if trial.should_prune():
+                raise optuna.TrialPruned()'''
+
         model.train()  # Modello impostato in modalità training
         
     # Caricamento del modello con i pesi migliori (checkpoint dell'early stopping)
     model.load_state_dict(torch.load(os.path.join(util.getModelsPath(), 'checkpoint.pth')))
+    writer.flush()
     return model
 
 
-def evaluate_model(model, X1_test, X2_test, X3_test, y_test):
+def evaluate_model(model, X1_test, X2_test, X3_test, y_test, custom_device=None):
     """
     Funzione che valuta un modello.
 
@@ -319,10 +337,10 @@ def evaluate_model(model, X1_test, X2_test, X3_test, y_test):
     """
 
     # Spostamento dei tensori sul dispositivo (cpu o gpu)
-    X1_test = torch.tensor(X1_test, dtype=torch.float32).to(device)
-    X2_test = torch.tensor(X2_test, dtype=torch.float32).to(device)
-    X3_test = torch.tensor(X3_test, dtype=torch.float32).to(device)
-    y_test = torch.tensor(y_test, dtype=torch.float32).to(device)
+    X1_test = torch.tensor(X1_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
+    X2_test = torch.tensor(X2_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
+    X3_test = torch.tensor(X3_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
+    y_test = torch.tensor(y_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
 
     model.eval()  # Modello impostato in modalità valutazione
 
@@ -337,7 +355,7 @@ def evaluate_model(model, X1_test, X2_test, X3_test, y_test):
         precision = precision_score(y_test, y_pred, average='weighted')
         recall = recall_score(y_test, y_pred, average='weighted')
         f1 = f1_score(y_test, y_pred, average='weighted')
-        print(f"\nValidation Metrics\nAccuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}")
+        print(f"\nEvaluation Metrics\nAccuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}")
 
         return accuracy
 
@@ -394,12 +412,14 @@ def objective(trial, X1_train, X2_train, X3_train, y_train, X1_val, X2_val, X3_v
     y_val = torch.nn.functional.one_hot(y_val, num_classes=num_classes).float()
 
     # Definizione degli iperparametri da ottimizzare
+
+    
     hyperparameters = {
-        'num_epochs': trial.suggest_int('num_epochs', 5, 20),
-        'hidden_size_1': trial.suggest_int('hidden_size_1', 32, 96, step=32),
-        'hidden_size_2': trial.suggest_int('hidden_size_2', 32, 96, step=32),
+        'num_epochs': trial.suggest_int('num_epochs', 20, 30),
+        'hidden_size_1': trial.suggest_int('hidden_size_1', 64, 96, step=32),
+        'hidden_size_2': trial.suggest_int('hidden_size_2', 32, 64, step=32),
         'hidden_size_3': trial.suggest_int('hidden_size_3', 32, 96, step=32),
-        'dropout_rate': trial.suggest_float('dropout_rate', 0.2, 0.5, step=0.1),
+        'dropout_rate': trial.suggest_float('dropout_rate', 0.2, 0.4, step=0.1),
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1e-2),
         'batch_size': trial.suggest_int('batch_size', 16, 64, step=16),
         'regularizer': trial.suggest_categorical('regularizer', ['l1', 'l2']),
@@ -434,13 +454,19 @@ def objective(trial, X1_train, X2_train, X3_train, y_train, X1_val, X2_val, X3_v
     val_loader = DataLoader(val_dataset, batch_size=hyperparameters['batch_size'], shuffle=False)
 
     # Addestramento del modello e valutazione
-    model = train_model(model, train_loader, val_loader, criterion, optimizer, hyperparameters['regularizer'], hyperparameters['weight_decay_rate'], num_epochs=hyperparameters['num_epochs'])
+    model = train_model(model, train_loader, val_loader, criterion, optimizer, hyperparameters['regularizer'], hyperparameters['weight_decay_rate'], num_epochs=hyperparameters['num_epochs'], trial=trial)
     val_accuracy = evaluate_model(model, X1_val, X2_val, X3_val, y_val)
 
+    # Se l'accuracy è migliore della migliore trovata finora, salvo il modello
+    global best_accuracy
+    if val_accuracy > best_accuracy:
+        best_accuracy = val_accuracy
+        save_model(model, os.path.join(util.getModelsPath(), 'LSTM_Combo3.pth'))
+
     # Report dell'Hyperband per la potatura
-    trial.report(val_accuracy, step=hyperparameters['num_epochs'])
+    '''trial.report(val_accuracy, step=hyperparameters['num_epochs'])
     if trial.should_prune():
-        raise optuna.TrialPruned()
+        raise optuna.TrialPruned()'''
 
     return val_accuracy
 
@@ -499,7 +525,7 @@ def train_best_model(best_param, X1, X2, X3, y, X1_val, X2_val, X3_val, y_val, n
     val_dataset = CustomDataset(X1_val, X2_val, X3_val, y_val)
     val_loader = DataLoader(val_dataset, batch_size=best_param['batch_size'], shuffle=False)
 
-    train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, num_epochs=30)  # Addestramento del modello
+    train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, num_epochs=best_param['num_epochs'])  # Addestramento del modello
     save_model(model, os.path.join(save_path, 'LSTM_Combo3.pth'))  # Salvataggio del modello
     print("Modello salvato con successo")
 
@@ -522,7 +548,7 @@ def create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes):
 
     pruner = optuna.pruners.HyperbandPruner(min_resource=1, max_resource=20, reduction_factor=3)
     study = optuna.create_study(direction='maximize', pruner=pruner)
-    study.optimize(lambda trial: objective(trial, X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes), n_trials=40)
+    study.optimize(lambda trial: objective(trial, X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes), n_trials=50)
     best_params = study.best_params
     print(f"\nBest params: {best_params}")
     best_params['X1_size'] = X1.shape[2]
@@ -531,5 +557,7 @@ def create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes):
     best_params['num_classes'] = num_classes
     np.save(os.path.join(util.getModelsPath(), 'best_params.npy'), best_params)
     print("Salvati in 'best_params.npy'")
-    print("\nAddestramento del modello con i migliori iperparametri...")
-    train_best_model(best_params, X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes, util.getModelsPath())
+    #print("\nAddestramento del modello con i migliori iperparametri...")
+    #train_best_model(best_params, X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes, util.getModelsPath())
+    writer.close()
+    best_accuracy = 0.0

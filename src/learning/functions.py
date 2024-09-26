@@ -104,17 +104,17 @@ class Rep_Good:
             'arms_up': {
                 'current': "good",
                 'good': "You're doing well!\nKeep it up",
-                'start_over': "",
+                'start_over': "You're doing well!\nKeep it up",
                 'start_under': "Lower your arms more",
-                'end_over': "",
+                'end_over': "You're doing well!\nKeep it up",
                 'end_under': "Raise your arms higher"
             },
             'chair_raises': {
                 'current': "good",
                 'good': "You're doing well!\nKeep it up",
-                'start_over': "",
+                'start_over': "You're doing well!\nKeep it up",
                 'start_under': "Sit correctly on the chair",
-                'end_over': "",
+                'end_over': "You're doing well!\nKeep it up",
                 'end_under': "Stretch your legs\nwhen you stand up"
             },
             'lateral_raises': {

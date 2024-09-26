@@ -196,11 +196,11 @@ class GUI:
         self.root.withdraw()
 
         self.classification_window = tk.Toplevel(self.root)
-        self.classification_window.title("FitnessAI - Exercise Detection")
+        self.classification_window.title("ElderFit - Exercise Detection")
         self.classification_window.protocol("WM_DELETE_WINDOW", self.close_classification_window)
 
         # Imposta le dimensioni della finestra
-        self.classification_window.geometry("1000x700")
+        self.classification_window.geometry("1140x700")
         self.classification_window.resizable(False, False)
 
         self.classification_window.columnconfigure(1, weight=1)
@@ -335,7 +335,8 @@ class GUI:
         tutorial_button.config(style="ModelButtons.TButton")        
 
         # Inizializzazione della webcam
-        self.cap = cv2.VideoCapture(self.cameras[0])
+        #self.cap = cv2.VideoCapture(self.cameras[0])
+        self.cap = cv2.VideoCapture(os.path.join(util.getBasePath(), "video", "info", "io.mp4"))
         self.webcam_menu.bind("<<ComboboxSelected>>", self.on_webcam_selected)
         # Aggiorno la webcam
         self.detection()
@@ -372,6 +373,7 @@ class GUI:
     def detection(self):
         ret, frame = self.cap.read()
         if ret:
+            frame = cv2.resize(frame, (780, 480))
             frame_c = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             exercise, rep, trainer_phrase, keypoints = self.classification.classify(frame)
             if self.choice_keypoints:

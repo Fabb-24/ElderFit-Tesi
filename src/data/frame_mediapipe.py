@@ -13,7 +13,7 @@ class Frame:
     num_opticalflow_data = 24
     num_mediapipe_keypoints = 33
 
-    angleDict = {  # angoli utili alla predizione
+    angleDict = {  # angoli articolari
         'left_elbow': [5, 3, 1],
         'right_elbow': [2, 4, 6],
         'left_shoulder': [3, 1, 7],

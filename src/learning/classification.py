@@ -1,6 +1,5 @@
 import tensorflow as tf
 import torch
-import cv2
 import numpy as np
 import util
 import os
@@ -129,7 +128,7 @@ class Classification:
             else:
                 self.effective_exercise = self.predicted_exercise[-1]
                 
-            if (self.predicted_exercise[-1] != self.effective_exercise and self.predicted_exercise[-1] != "None") or len(self.predicted_exercise) == 1:
+            if (self.predicted_exercise[-1] != self.effective_exercise or len(self.predicted_exercise) == 1) and self.predicted_exercise[-1] != "None":
                 self.rep_good.reset_category_count(self.predicted_exercise[-1])
 
             self.last_predicted_exercise = self.effective_exercise
