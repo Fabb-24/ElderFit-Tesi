@@ -335,8 +335,7 @@ class GUI:
         tutorial_button.config(style="ModelButtons.TButton")        
 
         # Inizializzazione della webcam
-        #self.cap = cv2.VideoCapture(self.cameras[0])
-        self.cap = cv2.VideoCapture(os.path.join(util.getBasePath(), "video", "info", "io.mp4"))
+        self.cap = cv2.VideoCapture(self.cameras[0])
         self.webcam_menu.bind("<<ComboboxSelected>>", self.on_webcam_selected)
         # Aggiorno la webcam
         self.detection()

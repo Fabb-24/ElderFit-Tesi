@@ -36,6 +36,7 @@ class Classification:
         self.predicted_exercise = []
         self.effective_exercise = "None"
         self.last_predicted_exercise = "None"
+        empty_count = 0
         self.rep_good = Rep_Good()
 
 
@@ -136,10 +137,14 @@ class Classification:
 
         # Se tutti i keypoints sono nulli, lo storico viene resettato, l'esercizio viene impostato a None, le ripetizioni vengono azzerate e la finestra viene svuotata
         if all([landmark["x"] == 0 and landmark["y"] == 0 for landmark in landmarks]):
-            self.predicted_exercise = []
-            self.effective_exercise = "None"
-            self.frames = []
-            self.rep_good.reset()
+            self.empty_count += 1
+            if self.empty_count >= 10:
+                self.predicted_exercise = []
+                self.effective_exercise = "None"
+                self.frames = []
+                self.rep_good.reset()
+        else:
+            self.empty_count = 0
 
         # Aggiorno le ripetizioni
         self.rep_good.update(curr_frame)
