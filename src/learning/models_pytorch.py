@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import optuna
 import util
@@ -13,8 +12,6 @@ import util
 
 # Dispositivo su cui eseguire il training: GPU se disponibile, altrimenti CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-writer = SummaryWriter()
 
 best_accuracy = 0.0
 
@@ -267,9 +264,6 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
             optimizer.step()  # Aggiornamento dei pesi
             epoch_loss += loss.item()  # Aggiornamento della loss
 
-        writer.add_scalar('Loss/train', epoch_loss / len(train_loader), epoch)  # Scrittura della loss di training su TensorBoard
-        writer.add_graph(model, (X1_batch, X2_batch, X3_batch))
-
         print(f"\nEpoch {epoch + 1}/{num_epochs}\nTraining Loss: {epoch_loss / len(train_loader):.4f}")  # Stampa della loss di training
 
         # Validation
@@ -317,7 +311,6 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
         
     # Caricamento del modello con i pesi migliori (checkpoint dell'early stopping)
     model.load_state_dict(torch.load(os.path.join(util.getModelsPath(), 'checkpoint.pth')))
-    writer.flush()
     return model
 
 

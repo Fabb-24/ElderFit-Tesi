@@ -200,7 +200,7 @@ class GUI:
         self.classification_window.protocol("WM_DELETE_WINDOW", self.close_classification_window)
 
         # Imposta le dimensioni della finestra
-        self.classification_window.geometry("1140x700")
+        self.classification_window.geometry("1000x700")
         self.classification_window.resizable(False, False)
 
         self.classification_window.columnconfigure(1, weight=1)
@@ -372,7 +372,7 @@ class GUI:
     def detection(self):
         ret, frame = self.cap.read()
         if ret:
-            frame = cv2.resize(frame, (780, 480))
+            frame = cv2.resize(frame, (640, 480))
             frame_c = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             exercise, rep, trainer_phrase, keypoints = self.classification.classify(frame)
             if self.choice_keypoints:

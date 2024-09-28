@@ -36,7 +36,7 @@ class Classification:
         self.predicted_exercise = []
         self.effective_exercise = "None"
         self.last_predicted_exercise = "None"
-        empty_count = 0
+        self.empty_count = 0
         self.rep_good = Rep_Good()
 
 
