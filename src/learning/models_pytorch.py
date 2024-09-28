@@ -552,5 +552,4 @@ def create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes):
     print("Salvati in 'best_params.npy'")
     #print("\nAddestramento del modello con i migliori iperparametri...")
     #train_best_model(best_params, X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes, util.getModelsPath())
-    writer.close()
     best_accuracy = 0.0
