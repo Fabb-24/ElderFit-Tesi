@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from data.frame_mediapipe import Frame
 from data.window import Window
-from data.videoParams import VideoParams
+from data.videoParams2 import VideoParams
 import os
 import util
 from dotenv import load_dotenv
@@ -65,10 +65,13 @@ class Video:
             self.windows[i].set_angles(np.array([frames[j].process_angles() for j in range(i, i + 15)]))
             self.windows[i].set_opticalflow(np.array(opticalflow[i:i + util.getWindowSize()]))
 
-        # Estraggo i parametri del video
+        '''# Estraggo i parametri del video
         params = VideoParams(frames, self.category)
         params.extract_parameters()
-        self.parameters = params.process_parameters()
+        self.parameters = params.process_parameters()'''
+
+        params = VideoParams(frames, self.category)
+        self.parameters = params.extract_parameters()
 
 
     # FUNZIONI GET E SET

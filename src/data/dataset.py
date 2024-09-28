@@ -131,6 +131,19 @@ class Dataset:
             if Dataset.stop_creation:
                 break
 
+        # Media dei parametri per ogni categoria (ogni categora è un vettore di dizionari, ogni dizionario contiene keypoints_max, keypoints_min, angles_max, angles_min)
+        for category in categories:
+            category_parameters = parameters[category]
+            avg_parameters = {}
+            for key in category_parameters[0].keys():
+                for i in range(len(category_parameters[0][key])):
+                    avg_parameters[key] = []
+                    for j in range(len(category_parameters)):
+                        avg_parameters[key].append(category_parameters[j][key][i])
+                    avg_parameters[key] = np.mean(avg_parameters[key])
+            parameters[category] = avg_parameters
+
+
         # Salvo le labels in un file npy
         np.save(os.path.join(util.getDatasetPath(), "labels.npy"), labels)
         
