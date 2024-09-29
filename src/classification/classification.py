@@ -5,7 +5,7 @@ import util
 import os
 
 from data.frame_mediapipe import Frame
-from learning.functions import Functions
+from classification.functions import Functions
 
 
 class Classification:

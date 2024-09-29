@@ -9,7 +9,7 @@ import numpy as np
 
 from data.dataset import Dataset
 from learning.models_pytorch import create_model
-from learning.classification import Classification
+from classification.classification import Classification
 import util
 
 class GUI:

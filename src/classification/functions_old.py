@@ -2,7 +2,7 @@ import math
 import os
 import numpy as np
 import util
-from data.videoParams2 import VideoParams as vp
+from data.videoParams_old import VideoParams as vp
 
 class Rep_Good:
     """
