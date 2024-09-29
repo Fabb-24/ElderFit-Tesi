@@ -5,6 +5,7 @@ from graphviz import Digraph
 import util
 import os
 from learning.models_pytorch import evaluate_model, CustomDataset
+import numpy as np
 
 start_application()
 

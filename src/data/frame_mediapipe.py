@@ -176,7 +176,15 @@ class Frame:
         - processed_keypoints (numpy.ndarray): i keypoints processati
         """
 
-        kp_copy = self.keypoints.copy()
+        #kp_copy = self.keypoints.copy()
+        kp_copy = [None for _ in range(len(self.keypoints))]
+        for i in range(len(self.keypoints)):
+            kp_copy[i] = {
+                "x": self.keypoints[i]["x"],
+                "y": self.keypoints[i]["y"],
+                "z": self.keypoints[i]["z"],
+                "visibility": self.keypoints[i]["visibility"]
+            }
 
         # Trasforma le coordinate x e y di ogni punto in coordinate rispetto al keypoint 0
         for i in range(1, len(kp_copy)):

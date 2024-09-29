@@ -130,6 +130,30 @@ class Dataset:
 
             if Dataset.stop_creation:
                 break
+            
+        
+        avg_all = {}
+        for category in categories:  # Per ognuna delle categorie
+            category_parameters = parameters[category]  # Parametri della categoria: lista di dizionari con keypoints_max, keypoints_min, angles_max, angles_min
+            avg_category = {}
+            for key in category_parameters[0].keys():  # Per ogni chiave del dizionario (keypoints_max, keypoints_min, angles_max, angles_min)
+                avg_category[key] = [None for _ in range(len(category_parameters[0][key]))]
+                for i in range(len(category_parameters[0][key])):  # Per ogni elemento della chiave
+                    if key == 'keypoints_max' or key == 'keypoints_min':
+                        avg_category[key][i] = [None for _ in range(len(category_parameters[0][key][i]))]
+                        for j in range(len(category_parameters[0][key][i])):  # per ogni elemento della lista
+                            mean = []
+                            for k in range(len(category_parameters)):  # Per ogni elemento della categoria
+                                mean.append(category_parameters[k][key][i][j])
+                            avg_category[key][i][j] = np.mean(mean)
+                    else:
+                        mean = []
+                        for k in range(len(category_parameters)):
+                            mean.append(category_parameters[k][key][i])
+                        avg_category[key][i] = np.mean(mean)
+            avg_all[category] = avg_category
+        parameters = avg_all
+
 
         # Salvo le labels in un file npy
         np.save(os.path.join(util.getDatasetPath(), "labels.npy"), labels)

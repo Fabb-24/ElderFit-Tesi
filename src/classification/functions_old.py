@@ -2,7 +2,7 @@ import math
 import os
 import numpy as np
 import util
-from data.videoParams import VideoParams as vp
+from data.videoParams_old import VideoParams as vp
 
 class Rep_Good:
     """
@@ -227,7 +227,6 @@ class Rep_Good:
         
         current_phrase = self.category_phrases[category]['current']
 
-        #print(category_start, current_state, last_state)
         for angle_type_num in range(len(self.parameters[category])):
             start_angle = self.category_data[category]["start_angle"][angle_type_num]
             end_angle = self.category_data[category]["end_angle"][angle_type_num]
