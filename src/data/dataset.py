@@ -130,18 +130,29 @@ class Dataset:
 
             if Dataset.stop_creation:
                 break
-
-        # Media dei parametri per ogni categoria (ogni categora è un vettore di dizionari, ogni dizionario contiene keypoints_max, keypoints_min, angles_max, angles_min)
-        for category in categories:
-            category_parameters = parameters[category]
-            avg_parameters = {}
-            for key in category_parameters[0].keys():
-                for i in range(len(category_parameters[0][key])):
-                    avg_parameters[key] = []
-                    for j in range(len(category_parameters)):
-                        avg_parameters[key].append(category_parameters[j][key][i])
-                    avg_parameters[key] = np.mean(avg_parameters[key])
-            parameters[category] = avg_parameters
+            
+        
+        avg_all = {}
+        for category in categories:  # Per ognuna delle categorie
+            category_parameters = parameters[category]  # Parametri della categoria: lista di dizionari con keypoints_max, keypoints_min, angles_max, angles_min
+            avg_category = {}
+            for key in category_parameters[0].keys():  # Per ogni chiave del dizionario (keypoints_max, keypoints_min, angles_max, angles_min)
+                avg_category[key] = [None for _ in range(len(category_parameters[0][key]))]
+                for i in range(len(category_parameters[0][key])):  # Per ogni elemento della chiave
+                    if key == 'keypoints_max' or key == 'keypoints_min':
+                        avg_category[key][i] = [None for _ in range(len(category_parameters[0][key][i]))]
+                        for j in range(len(category_parameters[0][key][i])):  # per ogni elemento della lista
+                            mean = []
+                            for k in range(len(category_parameters)):  # Per ogni elemento della categoria
+                                mean.append(category_parameters[k][key][i][j])
+                            avg_category[key][i][j] = np.mean(mean)
+                    else:
+                        mean = []
+                        for k in range(len(category_parameters)):
+                            mean.append(category_parameters[k][key][i])
+                        avg_category[key][i] = np.mean(mean)
+            avg_all[category] = avg_category
+        parameters = avg_all
 
 
         # Salvo le labels in un file npy

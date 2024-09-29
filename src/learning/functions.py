@@ -2,341 +2,294 @@ import math
 import os
 import numpy as np
 import util
+
 from data.videoParams import VideoParams as vp
 
-class Rep_Good:
+class Functions:
     """
-    Classe che si occupa di riconoscere e contare le ripetizioni di tutti gli esercizi.
+    Classe che si occupa del conteggio delle ripetizioni e della generazione di feedback per l'utente.
     """
 
     def __init__(self):
         """
-        Costruttore della classe.
+        Costruttore della classe. Inizializzo le variabili necessarie.
         """
-        self.category_data = {}
+
+        self.repetitions = {}
+        self.reset_repetitions()
         self.parameters = {}
-        self.reset()
         self.extract_parameters()
 
-
-    def reset(self):
-        """
-        Funzione che azzera i contatori delle ripetizioni per ogni categoria e stabilisce le tolleranze per il riconoscimento dell'inizio e della fine di un esercizio.
-        """
-
-        self.category_data = {
+        self.executions = {
             'arms_extension': {
-                'count': 0,
-                'state': 'start',
-                'last_state': 'start',
-                'tollerance_rep_start': 30,
-                'tollerance_rep_end': 15,
-                'tollerance_good_start': 10,
-                'tollerance_good_end': 10,
-                'start_angle': [],
-                'end_angle': [],
-                'current_points': -1
+                'max_angle': [],
+                'min_angle': [],
+                'reverse': False
             },
             'arms_up': {
-                'count': 0,
-                'state': 'start',
-                'last_state': 'start',
-                'tollerance_rep_start': 20,
-                'tollerance_rep_end': 20,
-                'tollerance_good_start': 10,
-                'tollerance_good_end': 10,
-                'start_angle': [],
-                'end_angle': [],
-                'current_points': -1
+                'max_angle': [],
+                'min_angle': [],
+                'reverse': True
             },
             'chair_raises': {
-                'count': 0,
-                'state': 'start',
-                'last_state': 'start',
-                'tollerance_rep_start': 35,
-                'tollerance_rep_end': 15,
-                'tollerance_good_start': 10,
-                'tollerance_good_end': 10,
-                'start_angle': [],
-                'end_angle': [],
-                'current_points': -1
+                'max_angle': [],
+                'min_angle': [],
+                'reverse': False
             },
             'lateral_raises': {
-                'count': 0,
-                'state': 'start',
-                'last_state': 'start',
-                'tollerance_rep_start': 20,
-                'tollerance_rep_end': 20,
-                'tollerance_good_start': 10,
-                'tollerance_good_end': 10,
-                'start_angle': [],
-                'end_angle': [],
-                'current_points': -1
+                'max_angle': [],
+                'min_angle': [],
+                'reverse': False
             },
             'leg_extension': {
-                'count': 0,
-                'state': 'start',
-                'last_state': 'start',
-                'tollerance_rep_start': 20,
-                'tollerance_rep_end': 20,
-                'tollerance_good_start': 10,
-                'tollerance_good_end': 10,
-                'start_angle': [],
-                'end_angle': [],
-                'current_points': -1
+                'max_angle': [],
+                'min_angle': [],
+                'reverse': False
             }
         }
 
-        for category in self.category_data:
-            for i in range(len(vp.get_category_parameters(category)["points"])):
-                self.category_data[category]["start_angle"].append(0 if vp.get_category_parameters(category)["start"] == 'min' else math.inf)
-                self.category_data[category]["end_angle"].append(0 if vp.get_category_parameters(category)["start"] == 'max' else math.inf)
+        for category in self.executions.keys():
+            self.executions[category]['max_angle'] = [0 for i in range(len(vp.category_angles[category]))]
+            self.executions[category]['min_angle'] = [180 for i in range(len(vp.category_angles[category]))]
 
-        self.category_phrases = {
+        self.feedbacks = {
+        'arms_extension': {
+            'current': "good",
+            'good': "You're doing well!\nKeep it up",
+            'start_over': "Don't close your arms\ntoo much",
+            'start_under': "Bring your arms\ncloser together",
+            'end_over': "Don't open your arms\ntoo much",
+            'end_under': "Open your arms wider"
+        },
+        'arms_up': {
+            'current': "good",
+            'good': "You're doing well!\nKeep it up",
+            'start_over': "You're doing well!\nKeep it up",
+            'start_under': "Lower your arms more",
+            'end_over': "You're doing well!\nKeep it up",
+            'end_under': "Raise your arms higher"
+        },
+        'chair_raises': {
+            'current': "good",
+            'good': "You're doing well!\nKeep it up",
+            'start_over': "You're doing well!\nKeep it up",
+            'start_under': "Sit correctly on the chair",
+            'end_over': "You're doing well!\nKeep it up",
+            'end_under': "Stretch your legs\nwhen you stand up"
+        },
+        'lateral_raises': {
+            'current': "good",
+            'good': "You're doing well!\nKeep it up",
+            'start_over': "Don't bring your arms\ntoo close to your body",
+            'start_under': "Bring your arms closer\nto your body",
+            'end_over': "Don't raise your arms\ntoo high",
+            'end_under': "Raise your arms higher"
+        },
+        'leg_extension': {
+            'current': "good",
+            'good': "You're doing well!\nKeep it up",
+            'start_over': "Don't close your leg\ntoo much",
+            'start_under': "Close your leg more",
+            'end_over': "Don't lift your leg\ntoo much",
+            'end_under': "Raise your leg higher"
+        }
+    }
+
+
+    def reset_repetitions(self):
+        """
+        Resetto il conteggio delle ripetizioni per tutte le categorie di esercizi.
+        """
+
+        self.repetitions = {
             'arms_extension': {
-                'current': "good",
-                'good': "You're doing well!\nKeep it up",
-                'start_over': "Don't close your arms\ntoo much",
-                'start_under': "Bring your arms\ncloser together",
-                'end_over': "Don't open your arms\ntoo much",
-                'end_under': "Open your arms wider"
+                'count': 0,
+                'state': 'start'
             },
             'arms_up': {
-                'current': "good",
-                'good': "You're doing well!\nKeep it up",
-                'start_over': "You're doing well!\nKeep it up",
-                'start_under': "Lower your arms more",
-                'end_over': "You're doing well!\nKeep it up",
-                'end_under': "Raise your arms higher"
+                'count': 0,
+                'state': 'start'
             },
             'chair_raises': {
-                'current': "good",
-                'good': "You're doing well!\nKeep it up",
-                'start_over': "You're doing well!\nKeep it up",
-                'start_under': "Sit correctly on the chair",
-                'end_over': "You're doing well!\nKeep it up",
-                'end_under': "Stretch your legs\nwhen you stand up"
+                'count': 0,
+                'state': 'start'
             },
             'lateral_raises': {
-                'current': "good",
-                'good': "You're doing well!\nKeep it up",
-                'start_over': "Don't bring your arms\ntoo close to your body",
-                'start_under': "Bring your arms closer\nto your body",
-                'end_over': "Don't raise your arms\ntoo high",
-                'end_under': "Raise your arms higher"
+                'count': 0,
+                'state': 'start'
             },
             'leg_extension': {
-                'current': "good",
-                'good': "You're doing well!\nKeep it up",
-                'start_over': "Don't close your leg\ntoo much",
-                'start_under': "Close your leg more",
-                'end_over': "Don't lift your leg\ntoo much",
-                'end_under': "Raise your leg higher"
+                'count': 0,
+                'state': 'start'
             }
         }
 
 
     def extract_parameters(self):
-        """
-        Funzione che recupera i parametri degli esercizi da file e li processa.
-        """
-
-        parameters = np.load(os.path.join(util.getParametersPath(), "parameters.npy"), allow_pickle=True).item()
-
-        # Per ogni categoria di esercizio fa la media dei parametri di start e end
-        for category in parameters:
-            self.parameters[category] = []
-            for i in range(len(vp.get_category_parameters(category)["points"])):
-                self.parameters[category].append({
-                    'start': np.mean([parameters[category][j][i]["start"] for j in range(len(parameters[category]))]),
-                    'end': np.mean([parameters[category][j][i]["end"] for j in range(len(parameters[category]))])
-                })
+        self.parameters = np.load(os.path.join(util.getParametersPath(), "parameters.npy"), allow_pickle=True).item()
 
 
     def update(self, frame):
         """
-        Funzione che aggiorna il contatore delle ripetizioni per ogni categoria di esercizio.
+        Funzione che aggiorna il conteggio delle ripetizioni e la generazione di feedback.
 
         Args:
-        - frame (Frame): frame corrente
+        - frame (numpy.ndarray): frame da processare
         """
 
-        for category in self.category_data:
-            category_type = vp.get_category_parameters(category)["type"]
-            category_points = vp.get_category_parameters(category)["points"]
-            category_start = vp.get_category_parameters(category)["start"]
+        self.update_repetitions(frame)
+        self.update_feedbacks(frame)
 
-            rep_conditions_start = []
-            rep_conditions_end = []
-            values = []
-            for i in range(len(self.parameters[category])):
-                parameters_info = {}
-                if category_start == 'min':
-                    interval = self.parameters[category][i]["end"] - self.parameters[category][i]["start"]
-                    parameters_info = {
-                        'near_start': self.parameters[category][i]["start"] + interval/100 * self.category_data[category]["tollerance_rep_start"],
-                        'near_end': self.parameters[category][i]["end"] - interval/100 * self.category_data[category]["tollerance_rep_end"]
-                    }
-                else:
-                    interval = self.parameters[category][i]["start"] - self.parameters[category][i]["end"]
-                    parameters_info = {
-                        'near_start': self.parameters[category][i]["start"] - interval/100 * self.category_data[category]["tollerance_rep_start"],
-                        'near_end': self.parameters[category][i]["end"] + interval/100 * self.category_data[category]["tollerance_rep_end"]
-                    }
-                
-                if category_type == 'distance':
-                    value = util.calculate_distance(vp.extract_points(frame, category_points[i][0]), vp.extract_points(frame, category_points[i][1])) / util.calculate_distance(vp.extract_points(frame, 1), vp.extract_points(frame, 7))
-                else:
-                    value = util.calculate_angle(vp.extract_points(frame, category_points[i][0]), vp.extract_points(frame, category_points[i][1]), vp.extract_points(frame, category_points[i][2]))
-
-                rep_conditions_start.append((self.category_data[category]["state"] == 'start') and ((category_start == 'min' and value > parameters_info['near_end']) or (category_start == 'max' and value < parameters_info['near_end'])))
-                rep_conditions_end.append((self.category_data[category]["state"] == 'end') and ((category_start == 'min' and value < parameters_info['near_start']) or (category_start == 'max' and value > parameters_info['near_start'])))
-
-                values.append(value)
-
-            '''passed = False
-            for i in range(len(rep_conditions_start)):
-                if rep_conditions_start[i]:
-                    self.category_data[category]["state"] = 'end'
-                    self.category_data[category]["current_points"] = i
-                    passed = True
-                    break
-            
-            if not passed:
-                for i in range(len(rep_conditions_end)):
-                    if rep_conditions_end[i] and self.category_data[category]["current_points"] == i:
-                        self.category_data[category]["state"] = 'start'
-                        self.category_data[category]["count"] += 1
-                        break'''
-
-            if any(rep_conditions_start):
-                self.category_data[category]["state"] = 'end'
-            elif any(rep_conditions_end):
-                self.category_data[category]["state"] = 'start'
-                self.category_data[category]["count"] += 1
-
-            self.update_good(category, interval, values)
-                
-            self.category_data[category]["last_state"] = self.category_data[category]["state"]
     
+    def update_repetitions(self, frame):
+        """
+        Aggiorno il numero di ripetizioni per ogni categoria di esercizio.
 
-    def update_good(self, category, interval, values):
-        category_start = vp.get_category_parameters(category)["start"]
-        current_state = self.category_data[category]["state"]
-        last_state = self.category_data[category]["last_state"]
-        
-        current_phrase = self.category_phrases[category]['current']
+        Args:
+            frame (Frame): frame da processare
+        """
 
-        #print(category_start, current_state, last_state)
-        for angle_type_num in range(len(self.parameters[category])):
-            start_angle = self.category_data[category]["start_angle"][angle_type_num]
-            end_angle = self.category_data[category]["end_angle"][angle_type_num]
-            start_interval = {
-                'min': self.parameters[category][angle_type_num]["start"] - interval/100 * self.category_data[category]["tollerance_good_start"],
-                'max': self.parameters[category][angle_type_num]["start"] + interval/100 * self.category_data[category]["tollerance_good_start"]
-            }
-            end_interval = {
-                'min': self.parameters[category][angle_type_num]["end"] - interval/100 * self.category_data[category]["tollerance_good_end"],
-                'max': self.parameters[category][angle_type_num]["end"] + interval/100 * self.category_data[category]["tollerance_good_end"]
-            }
+        curr_keypoints = frame.process_keypoints().tolist()
 
-            if category_start == 'min':
-                if current_state == 'start':
-                    # Se si è appena entrati nello stato start, si deve controllare l'angolo di end
-                    if last_state == 'end':
-                        # Se l'angolo maggiore rilevato è minore dell'intervallo di tolleranza -> end_under (se non ci sono altri problemi), se è maggiore -> end_over (se non ci sono altri problemi), altrimenti è good (se il problema è stato risolto)
-                        if end_angle < end_interval['min']:
-                            self.category_phrases[category]['current'] = 'end_under' if current_phrase == 'good' or current_phrase == 'end_over' else current_phrase
-                        elif end_angle > end_interval['max']:
-                            self.category_phrases[category]['current'] = 'end_over' if current_phrase == 'good' or current_phrase == 'end_under' else current_phrase
-                        else:
-                            self.category_phrases[category]['current'] = 'good' if current_phrase == 'end_over' or current_phrase == 'end_under' else current_phrase
-                        # Si azzera l'angolo di end
-                        self.category_data[category]["end_angle"][angle_type_num] = 0
-                    if values[angle_type_num] < self.category_data[category]["start_angle"][angle_type_num]:
-                        self.category_data[category]["start_angle"][angle_type_num] = values[angle_type_num]
-                elif current_state == 'end':
-                    # Se si è appena entrati nello stato end, si deve controllare l'angolo di start
-                    if last_state == 'start':
-                        # Se l'angolo minore rilevato è maggiore dell'intervallo di tolleranza -> start_under (se non ci sono altri problemi), se è minore -> start_over (se non ci sono altri problemi), altrimenti è good (se il problema è stato risolto)
-                        if start_angle > start_interval['max']:
-                            self.category_phrases[category]['current'] = 'start_under' if current_phrase == 'good' or current_phrase == 'start_over' else current_phrase
-                        elif start_angle < start_interval['min']:
-                            self.category_phrases[category]['current'] = 'start_over' if current_phrase == 'good' or current_phrase == 'start_under' else current_phrase
-                        else:
-                            self.category_phrases[category]['current'] = 'good' if current_phrase == 'start_over' or current_phrase == 'start_under' else current_phrase
-                        # Si azzera l'angolo di start
-                        self.category_data[category]["start_angle"][angle_type_num] = math.inf
-                    if values[angle_type_num] > self.category_data[category]["end_angle"][angle_type_num]:
-                        self.category_data[category]["end_angle"][angle_type_num] = values[angle_type_num]
+        for category in self.repetitions.keys():
+            distance_max = min([self.keypoints_distance(curr_keypoints, keypoints) for keypoints in self.parameters[category]["keypoints_max"]])
+            distance_min = min([self.keypoints_distance(curr_keypoints, keypoints) for keypoints in self.parameters[category]["keypoints_min"]])
+
+            if not self.executions[category]['reverse']:
+                if self.repetitions[category]['state'] == 'start':
+                    if distance_max < distance_min:
+                        self.repetitions[category]['state'] = 'end'
+                        self.executions[category]['max_angle'] = [0 for i in range(len(vp.category_angles[category]))]
+                elif self.repetitions[category]['state'] == 'end':
+                    if distance_min < distance_max:
+                        self.repetitions[category]['count'] += 1
+                        self.repetitions[category]['state'] = 'start'
+                        self.executions[category]['min_angle'] = [180 for i in range(len(vp.category_angles[category]))]
             else:
-                if current_state == 'start':
-                    # Se si è appena entrati nello stato start, si deve controllare l'angolo di end
-                    if last_state == 'end':
-                        # Se l'angolo minore rilevato è maggiore dell'intervallo di tolleranza -> end_under (se non ci sono altri problemi), se è minore -> end_over (se non ci sono altri problemi), altrimenti è good (se il problema è stato risolto)
-                        if end_angle > end_interval['max']:
-                            self.category_phrases[category]['current'] = 'end_under' if current_phrase == 'good' or current_phrase == 'end_over' else current_phrase
-                        elif end_angle < end_interval['min']:
-                            self.category_phrases[category]['current'] = 'end_over' if current_phrase == 'good' or current_phrase == 'end_under' else current_phrase
-                        else:
-                            self.category_phrases[category]['current'] = 'good' if current_phrase == 'end_over' or current_phrase == 'end_under' else current_phrase
-                        # Si azzera l'angolo di end
-                        self.category_data[category]["end_angle"][angle_type_num] = math.inf
-                    if values[angle_type_num] > self.category_data[category]["start_angle"][angle_type_num]:
-                        self.category_data[category]["start_angle"][angle_type_num] = values[angle_type_num]
-                elif current_state == 'end':
-                    # Se si è appena entrati nello stato end, si deve controllare l'angolo di start
-                    if last_state == 'start':
-                        # Se l'angolo maggiore rilevato è minore dell'intervallo di tolleranza -> start_under (se non ci sono altri problemi), se è maggiore -> start_over (se non ci sono altri problemi), altrimenti è good (se il problema è stato risolto)
-                        if start_angle < start_interval['min']:
-                            self.category_phrases[category]['current'] = 'start_under' if current_phrase == 'good' or current_phrase == 'start_over' else current_phrase
-                        elif start_angle > start_interval['max']:
-                            self.category_phrases[category]['current'] = 'start_over' if current_phrase == 'good' or current_phrase == 'start_under' else current_phrase
-                        else:
-                            self.category_phrases[category]['current'] = 'good' if current_phrase == 'start_over' or current_phrase == 'start_under' else current_phrase
-                        # Si azzera l'angolo di start
-                        self.category_data[category]["start_angle"][angle_type_num] = 0
-                    if values[angle_type_num] < self.category_data[category]["end_angle"][angle_type_num]:
-                        self.category_data[category]["end_angle"][angle_type_num] = values[angle_type_num]
+                if self.repetitions[category]['state'] == 'start':
+                    if distance_max > distance_min:
+                        self.repetitions[category]['state'] = 'end'
+                        self.executions[category]['min_angle'] = [180 for i in range(len(vp.category_angles[category]))]
+                elif self.repetitions[category]['state'] == 'end':
+                    if distance_min > distance_max:
+                        self.repetitions[category]['count'] += 1
+                        self.repetitions[category]['state'] = 'start'
+                        self.executions[category]['max_angle'] = [0 for i in range(len(vp.category_angles[category]))]
 
-    
-    # FUNZIONI GET E SET
 
-    def get_category_rep(self, category):
+    def update_feedbacks(self, frame, tollerance=10):
         """
-        Funzione che restituisce il contatore delle ripetizioni di una categoria.
+        Funzione che aggiorna i feedback per l'utente.
 
         Args:
-        - category (String): categoria dell'esercizio
+        - frame (numpy.ndarray): frame da processare
+        """
+
+        tollerance = tollerance / 100
+
+        for category in self.repetitions.keys():
+            angles_points = vp.category_angles[category]
+
+            for angle_index in range(len(angles_points)):
+                curr_angle = util.calculate_angle(vp.extract_points(frame, angles_points[angle_index][0]), vp.extract_points(frame, angles_points[angle_index][1]), vp.extract_points(frame, angles_points[angle_index][2]))
+                interval = (self.parameters[category]["angles_max"][angle_index] - self.parameters[category]["angles_min"][angle_index]) * tollerance
+
+                if self.repetitions[category]['state'] == 'start':
+                    if not self.executions[category]['reverse'] and curr_angle < self.executions[category]["min_angle"][angle_index]:
+                        self.executions[category]['min_angle'][angle_index] = curr_angle
+                    elif self.executions[category]['reverse'] and curr_angle > self.executions[category]["max_angle"][angle_index]:
+                        self.executions[category]['max_angle'][angle_index] = curr_angle
+                elif self.repetitions[category]['state'] == 'end':
+                    if not self.executions[category]['reverse'] and curr_angle > self.executions[category]["max_angle"][angle_index]:
+                        self.executions[category]['max_angle'][angle_index] = curr_angle
+                    elif self.executions[category]['reverse'] and curr_angle < self.executions[category]["min_angle"][angle_index]:
+                        self.executions[category]['min_angle'][angle_index] = curr_angle
+
+                if self.repetitions[category]['state'] == 'start':
+                    if not self.executions[category]['reverse']:
+                        if self.executions[category]['max_angle'][angle_index] < self.parameters[category]["angles_max"][angle_index] - interval:
+                            self.feedbacks[category]['current'] = 'end_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_over' else self.feedbacks[category]['current']
+                        elif self.executions[category]['max_angle'][angle_index] > self.parameters[category]["angles_max"][angle_index] + interval:
+                            self.feedbacks[category]['current'] = 'end_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
+                        else:
+                            self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'end_over' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
+                    else:
+                        if self.executions[category]['min_angle'][angle_index] > self.parameters[category]["angles_min"][angle_index] + interval:
+                            self.feedbacks[category]['current'] = 'end_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_over' else self.feedbacks[category]['current']
+                        elif self.executions[category]['min_angle'][angle_index] < self.parameters[category]["angles_min"][angle_index] - interval:
+                            self.feedbacks[category]['current'] = 'end_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
+                        else:
+                            self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'end_over' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
+                elif self.repetitions[category]['state'] == 'end':
+                    if not self.executions[category]['reverse']:
+                        if self.executions[category]['min_angle'][angle_index] > self.parameters[category]["angles_min"][angle_index] + interval:
+                            self.feedbacks[category]['current'] = 'start_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_over' else self.feedbacks[category]['current']
+                        elif self.executions[category]['min_angle'][angle_index] < self.parameters[category]["angles_min"][angle_index] - interval:
+                            self.feedbacks[category]['current'] = 'start_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                        else:
+                            self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'start_over' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                    else:
+                        if self.executions[category]['max_angle'][angle_index] < self.parameters[category]["angles_max"][angle_index] - interval:
+                            self.feedbacks[category]['current'] = 'start_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_over' else self.feedbacks[category]['current']
+                        elif self.executions[category]['max_angle'][angle_index] > self.parameters[category]["angles_max"][angle_index] + interval:
+                            self.feedbacks[category]['current'] = 'start_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                        else:
+                            self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'start_over' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+
+
+    def keypoints_distance(self, kp1, kp2):
+        """
+        Calcolo la distanza tra due insiemi di keypoints
+
+        Args:
+            kp1 (list): primo insieme di keypoints (lista semplice di valori)
+            kp2 (list): secondo insieme di keypoints (lista semplice di valori)
 
         Returns:
-        - count (Integer): numero di ripetizioni
+            float: distanza tra i due insiemi di keypoints
         """
 
-        return self.category_data[category]["count"]
+        sum = 0
+        for i in range(len(kp1)):
+            sum += (kp1[i] - kp2[i]) ** 2
+        return math.sqrt(sum)
+
+
+    def reset_category_repetitions(self, category):
+        """
+        Resetto il conteggio delle ripetizioni per una categoria specifica.
+
+        Args:
+            category (String): categoria dell'esercizio
+        """
+
+        self.repetitions[category]['count'] = 0
+        self.repetitions[category]['state'] = 'start'
+
+
+    def get_category_repetitions(self, category):
+        """
+        Restituisco il numero di ripetizioni per una categoria specifica.
+
+        Args:
+            category (String): categoria dell'esercizio
+
+        Returns:
+            int: numero di ripetizioni
+        """
+
+        return self.repetitions[category]['count']
     
+
     def get_category_phrase(self, category):
         """
-        Funzione che restituisce la frase corrente per una categoria.
+        Restituisco il feedback associato all'esercizio.
 
         Args:
-        - category (String): categoria dell'esercizio
+            category (String): categoria dell'esercizio
 
         Returns:
-        - phrase (String): frase corrente
+            String: feedback associato all'esercizio
         """
 
-        return self.category_phrases[category][self.category_phrases[category]['current']]
-    
-    def reset_category_count(self, category):
-        """
-        Funzione che azzera il contatore delle ripetizioni di una categoria.
-
-        Args:
-        - category (String): categoria dell'esercizio
-        """
-
-        self.category_data[category]["count"] = 0
-        self.category_data[category]["state"] = 'start'
-        self.category_data[category]["last_state"] = 'start'
-        self.category_data[category]["current_points"] = -1
+        return self.feedbacks[category][self.feedbacks[category]['current']]

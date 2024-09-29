@@ -1,70 +1,134 @@
 import util
+import numpy as np
 
 class VideoParams:
+    """
+    Classe che estrae e processa i parametri di un esercizio.
+    """
 
-    category_angles = {
-        'arms_extension': [
-            [3, (7, 8), 4]
-        ],
-        'arms_up': [
-            [5, (9, 10), 6]
-        ],
-        'chair_raises': [
-            [8, 7, 10]
-        ],
-        'lateral_raises': [
-            [3, 1, 7],
-            [4, 2, 8]
-        ],
-        'leg_extension': [
-            [7, 8, 10],
-            [8, 7, 9]
-        ]
+    parameters = {  # parametri degli esercizi: tipo di dato da estrarre, distanza (minima o massima di partenza), punti da cui estrarre i dati
+        'arms_extension': {
+            'type': 'angle',
+            'start': 'min',
+            'points': [
+                [3, (7, 8), 4]
+            ]
+        },
+        'arms_up': {
+            'type': 'angle',
+            'start': 'max',
+            'points': [
+                [5, (9, 10), 6]
+            ]
+        },
+        'chair_raises': {
+            'type': 'angle',
+            'start': 'min',
+            'points': [
+                [8, 7, 10]
+            ]
+        },
+        'lateral_raises': {
+            'type': 'angle',
+            'start': 'min',
+            'points': [
+                [3, 1, 7],
+                [4, 2, 8]
+            ]
+        },
+        'leg_extension': {
+            'type': 'angle',
+            'start': 'min',
+            'points': [
+                [7, 8, 10],
+                [8, 7, 9]
+            ]
+        }
     }
 
 
     def __init__(self, frames, category):
+        """
+        Costruttore della classe.
+        Pende in input i frame che compongono il video e la categoria dell'esercizio.
+
+        Args:
+        - frames (Array): array di frame
+        - category (String): categoria dell'esercizio
+        """
+
         self.frames = frames
         self.category = category
+        self.params = []
 
     
     def extract_parameters(self):
-        frames_max = []
-        frames_min = []
+        """
+        Funzione che estrae i parametri dell'esercizio.
+        """
 
-        for angle_points in self.category_angles[self.category]:
-            angles = []
+        type = VideoParams.parameters[self.category]['type']
+        if type == 'distance':
+            self.extract_distance()
+        elif type == 'angle':
+            self.extract_angle()
+    
 
-            for i in range(len(self.frames)):
-                angle = util.calculate_angle(self.extract_points(self.frames[i], angle_points[0]), self.extract_points(self.frames[i], angle_points[1]), self.extract_points(self.frames[i], angle_points[2]))
-                angles.append(angle)
+    def extract_distance(self):
+        """
+        Funzione che estrae la distanza tra due punti in tutti i frame.
+        """
 
-            # Trovo l'indice di angles in cui c'è l'angolo più ampio e quello più stretto
-            max_angle_index = angles.index(max(angles))
-            min_angle_index = angles.index(min(angles))
+        points = VideoParams.parameters[self.category]['points']
+        for point in points:
+            param = []
+            for frame in self.frames:
+                param.append(util.calculate_distance(self.extract_points(frame, point[0]), self.extract_points(frame, point[1])) / util.calculate_distance(self.extract_points(frame, 1), self.extract_points(frame, 7)))
+            self.params.append(param)
+        
+    
+    def extract_angle(self):
+        """
+        Funzione che estrae l'angolo in tutti i frame.
+        """
 
-            # Aggiungo i frame corrispondenti agli indici trovati
-            frames_max.append(self.frames[max_angle_index])
-            frames_min.append(self.frames[min_angle_index])
+        points = VideoParams.parameters[self.category]['points']
+        for point in points:
+            param = []
+            for frame in self.frames:
+                param.append(util.calculate_angle(self.extract_points(frame, point[0]), self.extract_points(frame, point[1]), self.extract_points(frame, point[2])))
+            self.params.append(param)
 
-        keypoints_max = [frame.process_keypoints() for frame in frames_max]
-        keypoints_min = [frame.process_keypoints() for frame in frames_min]
-        angles_max = [frame.process_angles() for frame in frames_max]
-        angles_min = [frame.process_angles() for frame in frames_min]
 
-        # trasformo da numpy array a lista
-        keypoints_max = [keypoint.tolist() for keypoint in keypoints_max]
-        keypoints_min = [keypoint.tolist() for keypoint in keypoints_min]
-        angles_max = [angle.tolist() for angle in angles_max]
-        angles_min = [angle.tolist() for angle in angles_min]
+    def process_parameters(self, num_samples=2):
+        """
+        Funzione che trova i valori di inizio e fine esercizio.
+        Per trovarli viene eseguita la media dei picchi dei parametri.
 
-        return {
-            'keypoints_max': keypoints_max,
-            'keypoints_min': keypoints_min,
-            'angles_max': angles_max,
-            'angles_min': angles_min
-        }
+        Returns:
+        - processed_params (Array): parametri processati
+        - num_samples (int): numero di campioni da considerare
+        """
 
+        start = VideoParams.parameters[self.category]['start']
+        processed_params = []
+
+        for i in range(len(self.params)):  # Per ogni dato (angoli o distanze) dell'esercizio
+            max_values = sorted(self.params[i], reverse=True)[:num_samples]
+            min_values = sorted(self.params[i])[:num_samples]
+            if start == 'min':
+                processed_params.append({
+                    'start': np.mean(min_values),
+                    'end': np.mean(max_values)
+                })
+            else:
+                processed_params.append({
+                    'start': np.mean(max_values),
+                    'end': np.mean(min_values)
+                })
+
+        return processed_params
+    
 
     @staticmethod
     def extract_points(frame, p):
@@ -89,3 +153,20 @@ class VideoParams:
                 'x': (frame.get_keypoint(a)['x'] + frame.get_keypoint(b)['x']) / 2,
                 'y': (frame.get_keypoint(a)['y'] + frame.get_keypoint(b)['y']) / 2
             }
+    
+
+    # FUNZIONI GET E SET
+
+    @staticmethod
+    def get_category_parameters(category):
+        """
+        Funzione che restituisce la forma dei parametri di una categoria.
+
+        Args:
+        - category (String): categoria dell'esercizio
+
+        Returns:
+        - parameters (dict): parametri dell'esercizio
+        """
+
+        return VideoParams.parameters[category]

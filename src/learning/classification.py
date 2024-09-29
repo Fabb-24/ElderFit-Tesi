@@ -5,7 +5,7 @@ import util
 import os
 
 from data.frame_mediapipe import Frame
-from learning.functions import Rep_Good
+from learning.functions import Functions
 
 
 class Classification:
@@ -37,7 +37,7 @@ class Classification:
         self.effective_exercise = "None"
         self.last_predicted_exercise = "None"
         self.empty_count = 0
-        self.rep_good = Rep_Good()
+        self.functions = Functions()
 
 
     def same_frame(self, frame1, frame2, threshold=0.05):
@@ -130,7 +130,7 @@ class Classification:
                 self.effective_exercise = self.predicted_exercise[-1]
                 
             if (self.predicted_exercise[-1] != self.effective_exercise or len(self.predicted_exercise) == 1) and self.predicted_exercise[-1] != "None":
-                self.rep_good.reset_category_count(self.predicted_exercise[-1])
+                self.functions.reset_category_repetitions(self.predicted_exercise[-1])
 
             self.last_predicted_exercise = self.effective_exercise
             self.frames = self.frames[int(util.getWindowSize()/2):]
@@ -139,95 +139,14 @@ class Classification:
         if all([landmark["x"] == 0 and landmark["y"] == 0 for landmark in landmarks]):
             self.empty_count += 1
             if self.empty_count >= 10:
-                self.predicted_exercise = []
+                self.predicted_exercise = ["None", "None", "None"]
                 self.effective_exercise = "None"
                 self.frames = []
-                self.rep_good.reset()
+                self.functions.reset_repetitions()
         else:
             self.empty_count = 0
 
         # Aggiorno le ripetizioni
-        self.rep_good.update(curr_frame)
+        self.functions.update(curr_frame)
 
-        return self.effective_exercise, self.rep_good.get_category_rep(self.effective_exercise) if self.effective_exercise != "None" else 0, self.rep_good.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks
-
-
-
-'''def classify(model_path, callback=None):
-    # Ottengo il modello per la classificazione
-    model = tf.keras.models.load_model(model_path)
-
-    # Inizializza le ripetizioni
-    rep_good = Rep_Good()
-
-    # Inizializza la webcam
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-
-    frames = []
-    categories = np.load(os.path.join(util.getDatasetPath(), "categories.npy"))
-    predicted_exercise = []
-    effective_exercise = "None"
-    last_predicted_exercise = "None"
-
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        curr_frame = Frame(frame)
-        #if not same_frame(frames[-1], curr_frame) if frames else True:
-        frames.append(curr_frame)
-
-        if len(frames) == util.getWindowSize():
-            opticalflow = []
-            for i in range(len(frames)):
-                frames[i].interpolate_keypoints(frames[i - 1] if i > 0 else None, frames[i + 1] if i < len(frames) - 1 else None)
-                frames[i].extract_angles()
-                if i > 0:
-                    opticalflow.append(frames[i].extract_opticalflow(frames[i - 1]))
-                else:
-                    opticalflow.append(np.zeros((Frame.num_opticalflow_data,)))
-                
-            kp = np.array([frames[i].process_keypoints() for i in range(util.getWindowSize())])
-            an = np.array([frames[i].process_angles() for i in range(util.getWindowSize())])
-            of = np.array(opticalflow)
-
-            # Creo i 3 input per il modello
-            X1 = kp.reshape(1, util.getWindowSize(), -1)
-            X2 = of.reshape(1, util.getWindowSize(), -1)
-            X3 = an.reshape(1, util.getWindowSize(), -1)
-
-            # Eseguo la predizione
-            predictions = model.predict([X1, X2, X3], verbose=0)
-            prediction = np.argmax(predictions, axis=1)[0]
-            predicted_exercise.append(categories[prediction] if predictions[0][prediction] > 0.4 else "None")
-
-            if len(predicted_exercise) == 3:
-                predicted_exercise = predicted_exercise[1:]
-
-            # ottengo l'esercizio presente piu volte in predicted_exercise
-            effective_exercise = max(set(predicted_exercise), key=predicted_exercise.count)
-
-            # Azzero le ripetizioni se l'esercizio predetto cambia
-            if effective_exercise != last_predicted_exercise:
-                rep_good.reset()
-
-            last_predicted_exercise = effective_exercise
-            frames = frames[int(util.getWindowSize()/2):]
-
-        # Aggiorno le ripetizioni
-        rep_good.update(curr_frame)
-
-        # Callback
-        if callback:
-            callback(frame, effective_exercise, rep_good.get_category_rep(effective_exercise) if effective_exercise != "None" else 0)
-        
-        # Esci premendo 'q'
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    
-    # Rilascia la videocamera e chiudi tutte le finestre
-    cap.release()
-    cv2.destroyAllWindows()'''
+        return self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks
