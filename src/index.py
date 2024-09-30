@@ -6,6 +6,9 @@ import util
 import os
 from learning.models_pytorch import evaluate_model, CustomDataset
 import numpy as np
+from learning.models_pytorch import create_model
+from data.dataset import Dataset
+from data.dataAugmentation import Videos
 
 start_application()
 
@@ -17,3 +20,15 @@ y_test = torch.nn.functional.one_hot(y_test, num_classes=num_classes).float()
 print("\n\n")
 evaluate_model(model, X1_test, X2_test, X3_test, y_test, "cpu")
 print("\n\n")'''
+
+'''def create_dataset():
+    Dataset().create()
+
+
+def learning():
+    X1, X2, X3, y, num_classes = util.get_dataset("train")
+    X1_test, X2_test, X3_test, y_test, _ = util.get_dataset("test")
+    create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes)
+
+create_dataset()
+learning()'''

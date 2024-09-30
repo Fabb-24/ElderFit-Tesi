@@ -13,7 +13,7 @@ class Classification:
     Classe che si occupa di classificare l'esercizio eseguito.
     """
 
-    def __init__(self, model_path):
+    def __init__(self, model_path, threshold=0.8):
         """
         Costruttore della classe.
 
@@ -29,6 +29,8 @@ class Classification:
             self.model = util.get_pytorch_model(model_path)
             self.model_lib = "pytorch"
 
+        self.threshold = threshold
+
         # Inizializzo le variabili
         self.frames = []
         self.last_frame = None
@@ -37,6 +39,7 @@ class Classification:
         self.effective_exercise = "None"
         self.last_predicted_exercise = "None"
         self.empty_count = 0
+        self.stop_count = 0
         self.functions = Functions()
 
 
@@ -88,6 +91,14 @@ class Classification:
 
         if len(self.frames) == 0 or not self.same_frame(self.frames[-1], curr_frame, threshold=0.04):  # Se il frame è diverso dal precedente, lo aggiungo alla lista
             self.frames.append(curr_frame)
+            self.stop_count = 0
+        else:
+            self.stop_count += 1
+            if self.stop_count >= 15:
+                self.predicted_exercise = ["None", "None", "None"]
+                self.effective_exercise = "None"
+                self.frames = []
+                self.functions.reset_repetitions()
 
         if len(self.frames) == util.getWindowSize():  # Se la lista ha raggiunto la dimensione della finestra
             opticalflow = []
@@ -117,7 +128,7 @@ class Classification:
 
             # Aggiorno lo storico delle predizioni
             prediction = np.argmax(predictions, axis=1)[0]
-            self.predicted_exercise.append(self.categories[prediction] if predictions[0][prediction] > 0.8 else "None")
+            self.predicted_exercise.append(self.categories[prediction] if predictions[0][prediction] > self.threshold else "None")
             # Riduco la lunghezza dello storico a 3 e calcolo l'esercizio effettivo come quello presente piu volte
             if len(self.predicted_exercise) == 4:
                 self.predicted_exercise = self.predicted_exercise[1:]
@@ -129,7 +140,9 @@ class Classification:
             else:
                 self.effective_exercise = self.predicted_exercise[-1]
                 
-            if (self.predicted_exercise[-1] != self.effective_exercise or len(self.predicted_exercise) == 1) and self.predicted_exercise[-1] != "None":
+            '''if (self.predicted_exercise[-1] != self.effective_exercise or len(self.predicted_exercise) == 1) and self.predicted_exercise[-1] != "None":
+                self.functions.reset_category_repetitions(self.predicted_exercise[-1])'''
+            if self.predicted_exercise.count(self.predicted_exercise[-1]) == 1 and self.predicted_exercise[-1] != "None":
                 self.functions.reset_category_repetitions(self.predicted_exercise[-1])
 
             self.last_predicted_exercise = self.effective_exercise

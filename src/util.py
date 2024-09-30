@@ -148,7 +148,7 @@ def get_pytorch_model(model_path):
         best_params['X1_size'], best_params['X2_size'], best_params['X3_size'],
         best_params['hidden_size_1'], best_params['hidden_size_2'], best_params['hidden_size_3'],
         best_params['num_classes'], best_params['dropout_rate'])
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     model.eval()
     return model
 
