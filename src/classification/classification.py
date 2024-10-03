@@ -70,7 +70,7 @@ class Classification:
         return True
     
 
-    def classify(self, frame, callback):
+    def classify(self, frame, callback=None):
         """
         Funzione che riceve in input un frame e restituisce l'esercizio eseguito, il numero di ripetizioni e la frase associata.
 
@@ -83,6 +83,7 @@ class Classification:
         - phrase (String): frase associata all'esercizio
         """
 
+        print("classification")
         curr_frame = Frame(frame)
         landmarks_o = curr_frame.get_keypoints()
         landmarks = []
@@ -92,7 +93,7 @@ class Classification:
                 "y": landmark["y"]
             })
 
-        if len(self.frames) == 0 or not self.same_frame(self.frames[-1], curr_frame, threshold=0.04):  # Se il frame è diverso dal precedente, lo aggiungo alla lista
+        if len(self.frames) == 0 or not self.same_frame(self.frames[-1], curr_frame, threshold=0.05):  # Se il frame è diverso dal precedente, lo aggiungo alla lista
             self.frames.append(curr_frame)
             self.stop_count = 0
         else:
@@ -149,7 +150,8 @@ class Classification:
                 self.functions.reset_category_repetitions(self.predicted_exercise[-1])
 
             self.last_predicted_exercise = self.effective_exercise
-            self.frames = self.frames[int(util.getWindowSize()/2):]
+            #self.frames = self.frames[int(util.getWindowSize()/2):]
+            self.frames = self.frames[1:]
 
         # Se tutti i keypoints sono nulli, lo storico viene resettato, l'esercizio viene impostato a None, le ripetizioni vengono azzerate e la finestra viene svuotata
         if all([landmark["x"] == 0 and landmark["y"] == 0 for landmark in landmarks]):
@@ -164,10 +166,12 @@ class Classification:
 
         # Aggiorno le ripetizioni
         self.functions.update(curr_frame)
-
-        #return self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks
-        callback(self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks)
-
+        
+        if callback is not None:
+            callback(frame, self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks)
+        
+        return self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks
+        
 
     def classify_multiprocessing(self, frame, callback):
         """

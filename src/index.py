@@ -10,6 +10,7 @@ from learning.models_pytorch import create_model
 from data.dataset import Dataset
 from data.dataAugmentation import Videos
 
+
 if __name__ == "__main__":
     start_application()
 

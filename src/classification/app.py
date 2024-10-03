@@ -53,6 +53,7 @@ class GUI:
         self.last_frame_time = 0
         self.classification = Classification(os.path.join(util.getBasePath(), "models", "LSTM_Combo3.pth"))
         self.choice_keypoints = False
+        self.cap = None
 
     
     def load_images(self):
@@ -390,10 +391,16 @@ class GUI:
     
 
     def detection(self):
-        def update_classification(exercise, rep, trainer_phrase, keypoints):
-            '''if self.choice_keypoints:
+        def update_classification(frame_w, exercise, rep, trainer_phrase, keypoints):
+            print("ciao")
+            frame_c = cv2.cvtColor(frame_w, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame_c)
+            img = ImageTk.PhotoImage(image=img)
+            self.webcam_label.config(image=img)
+            self.webcam_label.image = img
+            if self.choice_keypoints:
                 for kp in keypoints:
-                    cv2.circle(frame_c, (int(kp["x"] * frame.shape[1]), int(kp["y"] * frame.shape[0])), 5, (0, 255, 0), -1)'''
+                    cv2.circle(frame_c, (int(kp["x"] * frame.shape[1]), int(kp["y"] * frame.shape[0])), 5, (0, 255, 0), -1)
             self.exercise_name.config(text=exercise.replace("_", " "))
             self.repetitions_value.config(text=rep)
             self.trainer_text.config(text=trainer_phrase)
@@ -401,12 +408,12 @@ class GUI:
         ret, frame = self.cap.read()
         if ret:
             frame = cv2.resize(frame, (640, 480))
-            frame_c = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            #frame_c = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             self.classification.classify_multiprocessing(frame, update_classification)
-            img = Image.fromarray(frame_c)
-            img = ImageTk.PhotoImage(image=img)
-            self.webcam_label.config(image=img)
-            self.webcam_label.image = img
+            #img = Image.fromarray(frame_c)
+            #img = ImageTk.PhotoImage(image=img)
+            #self.webcam_label.config(image=img)
+            #self.webcam_label.image = img
         self.webcam_label.after(10, self.detection)
 
 
