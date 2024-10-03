@@ -10,7 +10,8 @@ from learning.models_pytorch import create_model
 from data.dataset import Dataset
 from data.dataAugmentation import Videos
 
-start_application()
+if __name__ == "__main__":
+    start_application()
 
 # Valuto il modello
 '''model = util.get_pytorch_model(os.path.join(util.getModelsPath(), "LSTM_Combo3.pth"))

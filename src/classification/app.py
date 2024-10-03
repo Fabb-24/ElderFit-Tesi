@@ -365,11 +365,12 @@ class GUI:
         self.classification_window.destroy()
         self.classification_window = None
         self.cap.release()
+        self.classification.close()
 
         self.root.deiconify()
 
 
-    def detection(self):
+    '''def detection(self):
         ret, frame = self.cap.read()
         if ret:
             frame = cv2.resize(frame, (640, 480))
@@ -385,6 +386,27 @@ class GUI:
             self.exercise_name.config(text=exercise.replace("_", " "))
             self.repetitions_value.config(text=rep)
             self.trainer_text.config(text=trainer_phrase)
+        self.webcam_label.after(10, self.detection)'''
+    
+
+    def detection(self):
+        def update_classification(exercise, rep, trainer_phrase, keypoints):
+            '''if self.choice_keypoints:
+                for kp in keypoints:
+                    cv2.circle(frame_c, (int(kp["x"] * frame.shape[1]), int(kp["y"] * frame.shape[0])), 5, (0, 255, 0), -1)'''
+            self.exercise_name.config(text=exercise.replace("_", " "))
+            self.repetitions_value.config(text=rep)
+            self.trainer_text.config(text=trainer_phrase)
+        
+        ret, frame = self.cap.read()
+        if ret:
+            frame = cv2.resize(frame, (640, 480))
+            frame_c = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self.classification.classify_multiprocessing(frame, update_classification)
+            img = Image.fromarray(frame_c)
+            img = ImageTk.PhotoImage(image=img)
+            self.webcam_label.config(image=img)
+            self.webcam_label.image = img
         self.webcam_label.after(10, self.detection)
 
 

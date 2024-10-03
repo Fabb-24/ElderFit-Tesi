@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import util
 import os
+import multiprocessing
 
 from data.frame_mediapipe import Frame
 from classification.functions import Functions
@@ -42,6 +43,8 @@ class Classification:
         self.stop_count = 0
         self.functions = Functions()
 
+        self.pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+
 
     def same_frame(self, frame1, frame2, threshold=0.05):
         """
@@ -67,7 +70,7 @@ class Classification:
         return True
     
 
-    def classify(self, frame):
+    def classify(self, frame, callback):
         """
         Funzione che riceve in input un frame e restituisce l'esercizio eseguito, il numero di ripetizioni e la frase associata.
 
@@ -162,4 +165,25 @@ class Classification:
         # Aggiorno le ripetizioni
         self.functions.update(curr_frame)
 
-        return self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks
+        #return self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks
+        callback(self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks)
+
+
+    def classify_multiprocessing(self, frame, callback):
+        """
+        Funzione che esegue la classificazione in parallelo.
+
+        Args:
+        - frame (numpy.ndarray): frame da classificare
+        """
+
+        return self.pool.apply_async(self.classify, args=(frame, callback))
+    
+
+    def close(self):
+        """
+        Funzione che chiude il pool di processi.
+        """
+
+        self.pool.close()
+        self.pool.join()

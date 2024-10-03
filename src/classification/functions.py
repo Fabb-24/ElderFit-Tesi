@@ -177,7 +177,7 @@ class Functions:
                         self.executions[category]['max_angle'] = [0 for i in range(len(vp.category_angles[category]))]
 
 
-    def update_feedbacks(self, frame, tollerance=10):
+    def update_feedbacks(self, frame, tollerance=5):
         """
         Funzione che aggiorna i feedback per l'utente.
 
