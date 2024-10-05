@@ -6,6 +6,7 @@ import os
 import threading
 import cv2
 import numpy as np
+import multiprocessing
 
 from data.dataset import Dataset
 from learning.models_pytorch import create_model
@@ -366,8 +367,6 @@ class GUI:
         self.classification_window.destroy()
         self.classification_window = None
         self.cap.release()
-        self.classification.close()
-
         self.root.deiconify()
 
 
@@ -392,7 +391,6 @@ class GUI:
 
     def detection(self):
         def update_classification(frame_w, exercise, rep, trainer_phrase, keypoints):
-            print("ciao")
             frame_c = cv2.cvtColor(frame_w, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(frame_c)
             img = ImageTk.PhotoImage(image=img)
@@ -408,12 +406,7 @@ class GUI:
         ret, frame = self.cap.read()
         if ret:
             frame = cv2.resize(frame, (640, 480))
-            #frame_c = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            self.classification.classify_multiprocessing(frame, update_classification)
-            #img = Image.fromarray(frame_c)
-            #img = ImageTk.PhotoImage(image=img)
-            #self.webcam_label.config(image=img)
-            #self.webcam_label.image = img
+            self.classification.classify(frame, update_classification)
         self.webcam_label.after(10, self.detection)
 
 

@@ -1,10 +1,8 @@
-import threading
 import tensorflow as tf
 import torch
 import numpy as np
 import util
 import os
-import multiprocessing
 
 from data.frame_mediapipe import Frame
 from classification.functions import Functions
@@ -44,14 +42,6 @@ class Classification:
         self.stop_count = 0
         self.functions = Functions()
 
-        self.pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-        self.queue = multiprocessing.Queue()
-        self.callback = None
-
-        self.processing_thread = threading.Thread(target=self.start_processing)
-        self.processing_thread.daemon = True  # Imposta il thread come daemon in modo che termini quando il programma principale finisce
-        self.processing_thread.start()
-
 
     def same_frame(self, frame1, frame2, threshold=0.05):
         """
@@ -77,7 +67,7 @@ class Classification:
         return True
     
 
-    def classify(self, frame, callback=None):
+    def classify(self, frame, callback):
         """
         Funzione che riceve in input un frame e restituisce l'esercizio eseguito, il numero di ripetizioni e la frase associata.
 
@@ -90,7 +80,6 @@ class Classification:
         - phrase (String): frase associata all'esercizio
         """
 
-        print("classification")
         curr_frame = Frame(frame)
         landmarks_o = curr_frame.get_keypoints()
         landmarks = []
@@ -178,35 +167,3 @@ class Classification:
             callback(frame, self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks)
         
         return self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks
-        
-
-    def start_processing(self):
-        while True:
-            frame = self.queue.get()
-            if frame is None:
-                break
-            async_result = self.pool.apply_async(self.classify, args=(frame, self.callback))
-
-    def classify_multiprocessing(self, frame, callback):
-        """
-        Funzione che esegue la classificazione in parallelo.
-
-        Args:
-        - frame (numpy.ndarray): frame da classificare
-        """
-
-        #async_result = self.pool.apply_async(self.classify_boh, args=(frame, callback))
-        #return async_result
-        self.callback = callback
-        self.queue.put(frame)
-    
-
-    def close(self):
-        """
-        Funzione che chiude il pool di processi.
-        """
-
-        self.pool.close()
-        self.pool.join()
-        self.queue.put(None)
-        self.processing_thread.join()
