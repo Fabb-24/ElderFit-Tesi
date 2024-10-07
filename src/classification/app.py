@@ -304,7 +304,7 @@ class GUI:
         keypoint_checkbox.grid(row=0, column=1, sticky="e", padx=5)
 
         # titolo lista esercizi
-        exercises_title = tk.Label(right_frame_classification, text="Exercises tutorial", font=("Arial", 20, "bold"))
+        exercises_title = tk.Label(right_frame_classification, text="Exercise tutorial", font=("Arial", 20, "bold"))
         exercises_title.grid(row=6, column=0, pady=(20, 10), sticky="ew")
 
         # lista scorrevole degli esercizi
@@ -392,13 +392,13 @@ class GUI:
     def detection(self):
         def update_classification(frame_w, exercise, rep, trainer_phrase, keypoints):
             frame_c = cv2.cvtColor(frame_w, cv2.COLOR_BGR2RGB)
+            if self.choice_keypoints:
+                for kp in keypoints:
+                    cv2.circle(frame_c, (int(kp["x"] * frame.shape[1]), int(kp["y"] * frame.shape[0])), 5, (0, 255, 0), -1)
             img = Image.fromarray(frame_c)
             img = ImageTk.PhotoImage(image=img)
             self.webcam_label.config(image=img)
             self.webcam_label.image = img
-            if self.choice_keypoints:
-                for kp in keypoints:
-                    cv2.circle(frame_c, (int(kp["x"] * frame.shape[1]), int(kp["y"] * frame.shape[0])), 5, (0, 255, 0), -1)
             self.exercise_name.config(text=exercise.replace("_", " "))
             self.repetitions_value.config(text=rep)
             self.trainer_text.config(text=trainer_phrase)
