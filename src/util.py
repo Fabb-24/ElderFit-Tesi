@@ -1,3 +1,5 @@
+import datetime
+import json
 import os
 from dotenv import load_dotenv
 import numpy as np
@@ -185,6 +187,53 @@ def get_dataset(type):
     return X1, X2, X3, y, num_classes
 
 
+def read_json(file_path):
+    """
+    Funzione che legge un file JSON.
+
+    Args:
+    - file_path (string): percorso del file JSON
+
+    Returns:
+    - data (dict): dati letti dal file JSON
+    """
+
+    with open(file_path) as f:
+        data = json.load(f)
+    return data
+
+
+def write_json(data, file_path):
+    """
+    Funzione che scrive un file JSON.
+
+    Args:
+    - data (dict): dati da scrivere nel file JSON
+    - file_path (string): percorso del file JSON
+
+    Returns:
+    - (bool): vero se i dati sono stati scritti correttamente, falso altrimenti
+    """
+
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(data, f)
+        return True
+    except Exception as e:
+        return False
+    
+
+def get_current_date():
+    """
+    Restituisce la data corrente nel formato "DD-MM-YYYY"
+
+    Returns:
+    - (string): data corrente
+    """
+
+    return datetime.now().strftime("%d-%m-%Y")
+
+
 
 # ================================================================== #
 # ================ FUNZIONI PER IL RECUPERO DEI PATH =============== #
@@ -266,6 +315,17 @@ def getParametersPath():
     """
 
     return os.path.join(getBasePath(), "dataset", os.getenv("PARAMETERS_PATH"))
+
+
+def getUsersPath():
+    """
+    Funzione che restituisce il percorso della cartella contenenente i dati degli utenti
+
+    Returns:
+        str: il percorso della cartella degli utenti
+    """
+
+    return os.path.join(getBasePath(), os.getenv("USERS_PATH"))
 
 
 def getWindowSize():

@@ -1,0 +1,16 @@
+{
+    "admin": {
+        "08-10-2024": {
+            "arms_up": {
+                "reps": 10,
+                "accuracy": 0.8,
+                "avg_time": 2.5
+            },
+            "chair_raises": {
+                "reps": 10,
+                "accuracy": 0.8,
+                "avg_time": 2.5
+            }
+        }
+    }
+}
