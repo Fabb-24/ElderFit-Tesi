@@ -47,15 +47,39 @@ class Users:
 
     
     def login(self, username, password):
+        """
+        Funzione che effettua il login e salva l'utente e la sessione corrente
+
+        Args:
+        - username (string): username dell'utente
+        - password (string): password dell'utente
+
+        Returns:
+        - (bool): vero se il login è avvenuto con successo, falso altrimenti
+        """
+
         if not self.user_exists(username):
             self.add_user(username, password)
+        elif not password == util.read_json(self.credentials_path)[username]["password"]:
+            return False
 
         date = util.get_current_date()
         self.current_user = username
         self.current_session = date
+        return True
 
 
     def update_session(self, exercise, reps, accuracy, avg_time):
+        """
+        Funzione che aggiorna i dati relativi all'esercizio eseguito
+
+        Args:
+        - exercise (string): esercizio eseguito
+        - reps (int): numero di ripetizioni
+        - accuracy (float): accuratezza
+        - avg_time (float): tempo medio
+        """
+
         data = util.read_json(self.data_path)
         if self.current_user not in data.keys():
             data[self.current_user] = {}

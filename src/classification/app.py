@@ -30,13 +30,15 @@ class GUI:
         self.container = tk.Frame(self.root)
         self.container.pack(fill="both", expand=True)
 
-        # Creiamo i due frame/pagine
+        # Creiamo i tre frame/pagine
         self.frame_home = tk.Frame(self.container)
         self.frame_learning = tk.Frame(self.container)
+        self.frame_login = tk.Frame(self.container)
 
         # Posiziona entrambi i frame nel container
         self.frame_home.place(relwidth=1, relheight=1)  # Frame 1 occupa tutta la finestra
         self.frame_learning.place(relwidth=1, relheight=1)  # Frame 2 occupa tutta la finestra
+        self.frame_login.place(relwidth=1, relheight=1)  # Frame 3 occupa tutta la finestra
 
         # Mostra la prima pagina (frame_home) all'avvio
         self.show_frame(self.frame_home)
@@ -46,6 +48,9 @@ class GUI:
 
         # Costruisci i contenuti di frame_learning
         self.build_frame_learning()
+
+        # Costruisci i contenuti di frame_login
+        self.build_frame_login()
         
         # Creazione dei thread
         self.create_threads()
@@ -117,7 +122,7 @@ class GUI:
         button1.grid(row=0, column=0, padx=20)
 
         # Pulsante 2 con icona e testo
-        button2 = ttk.Button(button_frame, text="Detect the exercises", compound="top", image=self.icon_home_second_button, command=lambda: self.create_classification_window())
+        button2 = ttk.Button(button_frame, text="Detect the exercises", compound="top", image=self.icon_home_second_button, command=lambda: self.show_frame(self.frame_login))
         button2.image = self.icon_home_second_button  # Per mantenere il riferimento all'immagine
         button2.grid(row=0, column=1, padx=20)
 
@@ -183,6 +188,60 @@ class GUI:
         self.model_cancel_button.image = self.icon_model_cancel
         self.model_cancel_button.grid(row=0, column=2, padx=(10, 0))
         self.model_cancel_button.config(style="ModelButtons.TButton")
+
+
+    def build_frame_login(self):
+        # Titolo della finestra di login
+        title = tk.Label(self.frame_login, text="Login / Registration", font=("Arial", 24))
+        title.pack(pady=(40, 30))
+
+        # Frame per campi di input
+        input_frame = tk.Frame(self.frame_login)
+        input_frame.pack(pady=10)
+
+        # font
+        label_font = ("Arial", 16)
+        entry_font = ("Arial", 15)
+
+        # Campo Username
+        label_username = tk.Label(input_frame, text="Username:", font=label_font)
+        label_username.pack(anchor="w", padx=5)
+
+        entry_username = tk.Entry(input_frame, width=30, font=entry_font)  # Campo di testo più grande
+        entry_username.pack(fill="x", padx=5, pady=5)
+
+        # Campo Password
+        label_password = tk.Label(input_frame, text="Password:", font=label_font)
+        label_password.pack(anchor="w", padx=5)
+
+        entry_password = tk.Entry(input_frame, show="*", width=30, font=entry_font)  # Campo di testo più grande
+        entry_password.pack(fill="x", padx=5, pady=5)
+
+        # Frame per pulsanti
+        button_frame = tk.Frame(self.frame_login)
+        button_frame.pack(pady=(30, 10))
+
+        '''# Pulsante Login
+        button_login = tk.Button(button_frame, text="Login", command=self.create_classification_window)
+        button_login.pack(side="left", padx=10)
+
+        # Pulsante Indietro
+        button_back = tk.Button(button_frame, text="Indietro", command=lambda: self.show_frame(self.frame_home))
+        button_back.pack(side="left", padx=10)'''
+
+        # Definisco lo stile per i pulsanti
+        button_style = ttk.Style()
+        button_style.configure("ModelButtons.TButton", font=("Arial", 14))
+
+        model_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=lambda: self.show_frame(self.frame_home))
+        model_back_button.image = self.icon_model_back
+        model_back_button.grid(row=0, column=0, padx=(10, 10))
+        model_back_button.config(style="ModelButtons.TButton")
+
+        model_play_button = ttk.Button(button_frame, text="Login", image=self.icon_model_start, compound="left", command=self.create_classification_window)
+        model_play_button.image = self.icon_model_start
+        model_play_button.grid(row=0, column=1, padx=(10, 10))
+        model_play_button.config(style="ModelButtons.TButton")
     
 
     def create_classification_window(self):
@@ -368,6 +427,7 @@ class GUI:
         self.classification_window = None
         self.cap.release()
         self.root.deiconify()
+        self.show_frame(self.frame_home)
 
 
     '''def detection(self):
