@@ -6,6 +6,7 @@ import os
 
 from data.frame_mediapipe import Frame
 from classification.functions import Functions
+from classification.users import Users
 
 
 class Classification:
@@ -30,6 +31,7 @@ class Classification:
             self.model_lib = "pytorch"
 
         self.threshold = threshold
+        self.users = Users()
 
         # Inizializzo le variabili
         self.frames = []

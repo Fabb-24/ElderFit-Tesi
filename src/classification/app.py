@@ -12,6 +12,7 @@ from data.dataset import Dataset
 from learning.models_pytorch import create_model
 from classification.classification import Classification
 import util
+from classification.users import Users
 
 class GUI:
     def __init__(self, root):
@@ -54,6 +55,8 @@ class GUI:
         
         # Creazione dei thread
         self.create_threads()
+
+        self.users = Users()
 
         self.classification_window = None
         self.last_frame_time = 0
@@ -98,6 +101,11 @@ class GUI:
         icon_classification_person = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "person.png"))
         icon_classification_person = icon_classification_person.resize((140, 140), Image.LANCZOS)
         self.icon_classification_person = ImageTk.PhotoImage(icon_classification_person)
+
+
+    # ========================================================================================================
+    # FRAME E FINESTRE
+    # ========================================================================================================
 
 
     def build_frame_home(self):
@@ -207,41 +215,37 @@ class GUI:
         label_username = tk.Label(input_frame, text="Username:", font=label_font)
         label_username.pack(anchor="w", padx=5)
 
-        entry_username = tk.Entry(input_frame, width=30, font=entry_font)  # Campo di testo più grande
-        entry_username.pack(fill="x", padx=5, pady=5)
+        self.entry_username = tk.Entry(input_frame, width=30, font=entry_font)  # Campo di testo più grande
+        self.entry_username.pack(fill="x", padx=5, pady=5)
 
         # Campo Password
         label_password = tk.Label(input_frame, text="Password:", font=label_font)
         label_password.pack(anchor="w", padx=5)
 
-        entry_password = tk.Entry(input_frame, show="*", width=30, font=entry_font)  # Campo di testo più grande
-        entry_password.pack(fill="x", padx=5, pady=5)
+        self.entry_password = tk.Entry(input_frame, show="*", width=30, font=entry_font)  # Campo di testo più grande
+        self.entry_password.pack(fill="x", padx=5, pady=5)
+
+        # Label di errore nel login
+        self.error_label = tk.Label(input_frame, text="", font=("Arial", 12), fg="red")
+        self.error_label.pack(pady=5)
 
         # Frame per pulsanti
         button_frame = tk.Frame(self.frame_login)
-        button_frame.pack(pady=(30, 10))
-
-        '''# Pulsante Login
-        button_login = tk.Button(button_frame, text="Login", command=self.create_classification_window)
-        button_login.pack(side="left", padx=10)
-
-        # Pulsante Indietro
-        button_back = tk.Button(button_frame, text="Indietro", command=lambda: self.show_frame(self.frame_home))
-        button_back.pack(side="left", padx=10)'''
+        button_frame.pack(pady=(20, 10))
 
         # Definisco lo stile per i pulsanti
         button_style = ttk.Style()
-        button_style.configure("ModelButtons.TButton", font=("Arial", 14))
+        button_style.configure("LoginButtons.TButton", font=("Arial", 14))
 
-        model_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=lambda: self.show_frame(self.frame_home))
-        model_back_button.image = self.icon_model_back
-        model_back_button.grid(row=0, column=0, padx=(10, 10))
-        model_back_button.config(style="ModelButtons.TButton")
+        login_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=self.back_login)
+        login_back_button.image = self.icon_model_back
+        login_back_button.grid(row=0, column=0, padx=(10, 10))
+        login_back_button.config(style="LoginButtons.TButton")
 
-        model_play_button = ttk.Button(button_frame, text="Login", image=self.icon_model_start, compound="left", command=self.create_classification_window)
-        model_play_button.image = self.icon_model_start
-        model_play_button.grid(row=0, column=1, padx=(10, 10))
-        model_play_button.config(style="ModelButtons.TButton")
+        login_enter_button = ttk.Button(button_frame, text="Login", image=self.icon_model_start, compound="left", command=self.login)
+        login_enter_button.image = self.icon_model_start
+        login_enter_button.grid(row=0, column=1, padx=(10, 10))
+        login_enter_button.config(style="LoginButtons.TButton")
     
 
     def create_classification_window(self):
@@ -400,6 +404,32 @@ class GUI:
         self.webcam_menu.bind("<<ComboboxSelected>>", self.on_webcam_selected)
         # Aggiorno la webcam
         self.detection()
+
+
+    # ========================================================================================================
+    # FUNZIONI
+    # ========================================================================================================
+
+
+    def back_login(self):
+        self.show_frame(self.frame_home)
+        self.error_label.config(text="")
+
+
+    def login(self):
+        username = self.entry_username.get()
+        password = self.entry_password.get()
+        if username == "" or password == "":
+            self.error_label.config(text="Username and password are required")
+            return
+
+        if self.users.login(username, password):
+            self.entry_username.delete(0, tk.END)
+            self.entry_password.delete(0, tk.END)
+            self.error_label.config(text="")
+            self.create_classification_window()
+        else:
+            self.error_label.config(text="Incorrect password")
 
 
     def show_video_tutorial(self):

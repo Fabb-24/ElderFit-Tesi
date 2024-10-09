@@ -6,15 +6,11 @@ class Users:
     Classe che gestisce utenti e sessione corrente
     """
 
-    def __init__(self):
-        """
-        Costruttore della classe
-        """
-
-        self.current_user = None
-        self.current_session = None
-        self.credentials_path = os.path.join(util.getUsersPath(), "credentials.json")
-        self.data_path = os.path.join(util.getUsersPath(), "data.json")
+    # Attributi statici
+    current_session = None
+    current_user = None
+    credentials_path = os.path.join(util.getUsersPath(), "credentials.json")
+    data_path = os.path.join(util.getUsersPath(), "data.json")
 
 
     def user_exists(self, username):
@@ -25,11 +21,15 @@ class Users:
         - username (string): username dell'utente
 
         Returns:
-        - (bool): vero se l'utente esiste, falso altrimenti
+        - (int): indice dell'utente se esiste, -1 altrimenti
         """
 
-        credentials = util.read_json(self.credentials_path)
-        return username in [credentials[i]["username"] for i in range(len(credentials))]
+        credentials = util.read_json(Users.credentials_path)
+        #return username in [credentials[i]["username"] for i in range(len(credentials))]
+        for i in range(len(credentials)):
+            if username == credentials[i]["username"]:
+                return i
+        return -1
     
 
     def add_user(self, username, password):
@@ -41,9 +41,9 @@ class Users:
         - password (string): password dell'utente
         """
 
-        credentials = util.read_json(self.credentials_path)
+        credentials = util.read_json(Users.credentials_path)
         credentials.append({"username": username, "password": password})
-        util.write_json(credentials, self.credentials_path)
+        util.write_json(credentials, Users.credentials_path)
 
     
     def login(self, username, password):
@@ -58,14 +58,15 @@ class Users:
         - (bool): vero se il login è avvenuto con successo, falso altrimenti
         """
 
-        if not self.user_exists(username):
+        index = self.user_exists(username)
+        if index == -1:
             self.add_user(username, password)
-        elif not password == util.read_json(self.credentials_path)[username]["password"]:
+        elif not password == util.read_json(Users.credentials_path)[index]["password"]:
             return False
 
         date = util.get_current_date()
-        self.current_user = username
-        self.current_session = date
+        Users.current_user = username
+        Users.current_session = date
         return True
 
 
@@ -80,12 +81,19 @@ class Users:
         - avg_time (float): tempo medio
         """
 
-        data = util.read_json(self.data_path)
-        if self.current_user not in data.keys():
-            data[self.current_user] = {}
-        if self.current_session not in data[self.current_user].keys():
-            data[self.current_user][self.current_session] = {}
-        data[self.current_user][self.current_session][exercise] = {}
-        data[self.current_user][self.current_session][exercise]["reps"] = reps
-        data[self.current_user][self.current_session][exercise]["accuracy"] = accuracy
-        data[self.current_user][self.current_session][exercise]["avg_time"] = avg_time
+        data = util.read_json(Users.data_path)
+        if Users.current_user not in data.keys():
+            data[Users.current_user] = {}
+
+        if Users.current_session not in data[Users.current_user].keys():
+            data[Users.current_user][Users.current_session] = {}
+
+        if exercise not in data[Users.current_user][Users.current_session].keys():
+            data[Users.current_user][Users.current_session][exercise] = {}
+            data[Users.current_user][Users.current_session][exercise]["reps"] = reps
+            data[Users.current_user][Users.current_session][exercise]["accuracy"] = accuracy
+            data[Users.current_user][Users.current_session][exercise]["avg_time"] = avg_time
+        else:
+            data[Users.current_user][Users.current_session][exercise]["accuracy"] = (data[Users.current_user][Users.current_session][exercise]["accuracy"] + accuracy) / 2
+            data[Users.current_user][Users.current_session][exercise]["avg_time"] = (data[Users.current_user][Users.current_session][exercise]["avg_time"] * data[Users.current_user][Users.current_session][exercise]["reps"] + avg_time * reps) / (data[Users.current_user][Users.current_session][exercise]["reps"] + reps)
+            data[Users.current_user][Users.current_session][exercise]["reps"] += reps

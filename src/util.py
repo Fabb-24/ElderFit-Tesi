@@ -225,13 +225,13 @@ def write_json(data, file_path):
 
 def get_current_date():
     """
-    Restituisce la data corrente nel formato "DD-MM-YYYY"
+    Restituisce la data corrente nel formato "DD-MM-YYYY-HH-MM-SS"
 
     Returns:
     - (string): data corrente
     """
 
-    return datetime.now().strftime("%d-%m-%Y")
+    return datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
 
 
 
