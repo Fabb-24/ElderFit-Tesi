@@ -104,23 +104,33 @@ class Functions:
         self.repetitions = {
             'arms_extension': {
                 'count': 0,
-                'state': 'start'
+                'state': 'start',
+                'start_time': 0,
+                'times': []
             },
             'arms_up': {
                 'count': 0,
-                'state': 'start'
+                'state': 'start',
+                'start_time': 0,
+                'times': []
             },
             'chair_raises': {
                 'count': 0,
-                'state': 'start'
+                'state': 'start',
+                'start_time': 0,
+                'times': []
             },
             'lateral_raises': {
                 'count': 0,
-                'state': 'start'
+                'state': 'start',
+                'start_time': 0,
+                'times': []
             },
             'leg_extension': {
                 'count': 0,
-                'state': 'start'
+                'state': 'start',
+                'start_time': 0,
+                'times': []
             }
         }
 
@@ -165,6 +175,7 @@ class Functions:
                         self.repetitions[category]['count'] += 1
                         self.repetitions[category]['state'] = 'start'
                         self.executions[category]['min_angle'] = [180 for i in range(len(vp.category_angles[category]))]
+                        self.update_times(category)
             else:
                 if self.repetitions[category]['state'] == 'start':
                     if distance_max > distance_min:
@@ -175,6 +186,22 @@ class Functions:
                         self.repetitions[category]['count'] += 1
                         self.repetitions[category]['state'] = 'start'
                         self.executions[category]['max_angle'] = [0 for i in range(len(vp.category_angles[category]))]
+                        self.update_times(category)
+
+    
+    def update_times(self, category):
+        """
+        Aggiorno i tempi di esecuzione per una categoria specifica. Registro il tempo di esecuzione della ripetizione e resetto il tempo di inizio.
+
+        Args:
+        - category (String): categoria dell'esercizio
+        """
+
+        if self.repetitions[category]['count'] == 1:
+            self.repetitions[category]['start_time'] = util.get_current_time()
+        elif self.repetitions[category]['count'] > 1:
+            self.repetitions[category]['times'].append(util.get_current_time() - self.repetitions[category]['start_time'])
+            self.repetitions[category]['start_time'] = util.get_current_time()
 
 
     def update_feedbacks(self, frame, tollerance=5):
@@ -265,6 +292,8 @@ class Functions:
 
         self.repetitions[category]['count'] = 0
         self.repetitions[category]['state'] = 'start'
+        self.repetitions[category]['start_time'] = 0
+        self.repetitions[category]['times'] = []
 
 
     def get_category_repetitions(self, category):
@@ -279,6 +308,20 @@ class Functions:
         """
 
         return self.repetitions[category]['count']
+    
+
+    def get_category_avg_time(self, category):
+        """
+        Restituisco il tempo medio di esecuzione per una categoria specifica.
+
+        Args:
+            category (String): categoria dell'esercizio
+
+        Returns:
+            float: tempo medio di esecuzione
+        """
+
+        return np.mean(self.repetitions[category]['times']) if len(self.repetitions[category]['times']) > 0 else 0
     
 
     def get_category_phrase(self, category):

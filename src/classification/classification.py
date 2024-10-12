@@ -100,7 +100,7 @@ class Classification:
                 self.predicted_exercise = ["None", "None", "None"]
                 self.effective_exercise = "None"
                 self.frames = []
-                self.functions.reset_repetitions()
+                #self.functions.reset_repetitions()
 
         if len(self.frames) == util.getWindowSize():  # Se la lista ha raggiunto la dimensione della finestra
             opticalflow = []
@@ -142,12 +142,10 @@ class Classification:
             else:
                 self.effective_exercise = self.predicted_exercise[-1]
                 
-            '''if (self.predicted_exercise[-1] != self.effective_exercise or len(self.predicted_exercise) == 1) and self.predicted_exercise[-1] != "None":
-                self.functions.reset_category_repetitions(self.predicted_exercise[-1])'''
             if self.predicted_exercise.count(self.predicted_exercise[-1]) == 1 and self.predicted_exercise[-1] != "None":
                 self.functions.reset_category_repetitions(self.predicted_exercise[-1])
 
-            self.last_predicted_exercise = self.effective_exercise
+            #self.last_predicted_exercise = self.effective_exercise
             #self.frames = self.frames[int(util.getWindowSize()/2):]
             self.frames = self.frames[1:]
 
@@ -158,14 +156,25 @@ class Classification:
                 self.predicted_exercise = ["None", "None", "None"]
                 self.effective_exercise = "None"
                 self.frames = []
-                self.functions.reset_repetitions()
+                #self.functions.reset_repetitions()
         else:
             self.empty_count = 0
 
+        if self.effective_exercise != self.last_predicted_exercise and self.last_predicted_exercise != "None":
+            exer = self.last_predicted_exercise
+            reps = self.functions.get_category_repetitions(exer)
+            avg_time = self.functions.get_category_avg_time(exer)
+            accuracy = 0
+            if reps > 2:
+                self.users.update_session(exer, reps, accuracy, avg_time)
+
         # Aggiorno le ripetizioni
         self.functions.update(curr_frame)
+        cat_reps = self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0
+
+        self.last_predicted_exercise = self.effective_exercise
         
         if callback is not None:
-            callback(frame, self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks)
+            callback(frame, self.effective_exercise, cat_reps, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks)
         
-        return self.effective_exercise, self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks
+        return self.effective_exercise, cat_reps, self.functions.get_category_phrase(self.effective_exercise) if self.effective_exercise != "None" else "", landmarks

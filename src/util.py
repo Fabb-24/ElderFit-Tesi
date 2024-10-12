@@ -234,6 +234,17 @@ def get_current_date():
     return datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
 
 
+def get_current_time():
+    """
+    Restituisce il tempo corrente che può essere utilizzato per calcolare il tempo trascorso
+
+    Returns:
+    - (float): tempo corrente
+    """
+
+    return datetime.datetime.now().timestamp()
+
+
 
 # ================================================================== #
 # ================ FUNZIONI PER IL RECUPERO DEI PATH =============== #

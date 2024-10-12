@@ -97,3 +97,5 @@ class Users:
             data[Users.current_user][Users.current_session][exercise]["accuracy"] = (data[Users.current_user][Users.current_session][exercise]["accuracy"] + accuracy) / 2
             data[Users.current_user][Users.current_session][exercise]["avg_time"] = (data[Users.current_user][Users.current_session][exercise]["avg_time"] * data[Users.current_user][Users.current_session][exercise]["reps"] + avg_time * reps) / (data[Users.current_user][Users.current_session][exercise]["reps"] + reps)
             data[Users.current_user][Users.current_session][exercise]["reps"] += reps
+
+        util.write_json(data, Users.data_path)
