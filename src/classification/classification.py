@@ -126,7 +126,7 @@ class Classification:
             else:
                 predictions = self.model(torch.tensor(X1, dtype=torch.float32), torch.tensor(X2, dtype=torch.float32), torch.tensor(X3, dtype=torch.float32))
                 predictions = predictions.detach().numpy()
-            print(predictions)
+            #print(predictions)
 
             # Aggiorno lo storico delle predizioni
             prediction = np.argmax(predictions, axis=1)[0]
@@ -135,7 +135,7 @@ class Classification:
             if len(self.predicted_exercise) == 4:
                 self.predicted_exercise = self.predicted_exercise[1:]
 
-            print(self.predicted_exercise)
+            #print(self.predicted_exercise)
 
             if len(self.predicted_exercise) == 3:
                 self.effective_exercise = max(set(self.predicted_exercise), key=self.predicted_exercise.count)
@@ -164,7 +164,7 @@ class Classification:
             exer = self.last_predicted_exercise
             reps = self.functions.get_category_repetitions(exer)
             avg_time = self.functions.get_category_avg_time(exer)
-            accuracy = 0
+            accuracy = self.functions.get_category_accuracy(exer)
             if reps > 2:
                 self.users.update_session(exer, reps, accuracy, avg_time)
 

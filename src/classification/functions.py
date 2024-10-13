@@ -55,43 +55,43 @@ class Functions:
         self.feedbacks = {
         'arms_extension': {
             'current': "good",
-            'good': "You're doing well!\nKeep it up",
-            'start_over': "Don't close your arms\ntoo much",
-            'start_under': "Bring your arms\ncloser together",
-            'end_over': "Don't open your arms\ntoo much",
-            'end_under': "Open your arms wider"
+            'good': ("You're doing well!\nKeep it up", True),
+            'start_over': ("Don't close your arms\ntoo much", False),
+            'start_under': ("Bring your arms\ncloser together", False),
+            'end_over': ("Don't open your arms\ntoo much", False),
+            'end_under': ("Open your arms wider", False)
         },
         'arms_up': {
             'current': "good",
-            'good': "You're doing well!\nKeep it up",
-            'start_over': "You're doing well!\nKeep it up",
-            'start_under': "Lower your arms more",
-            'end_over': "You're doing well!\nKeep it up",
-            'end_under': "Raise your arms higher"
+            'good': ("You're doing well!\nKeep it up", True),
+            'start_over': ("You're doing well!\nKeep it up", True),
+            'start_under': ("Lower your arms more", False),
+            'end_over': ("You're doing well!\nKeep it up", True),
+            'end_under': ("Raise your arms higher", False)
         },
         'chair_raises': {
             'current': "good",
-            'good': "You're doing well!\nKeep it up",
-            'start_over': "You're doing well!\nKeep it up",
-            'start_under': "Sit correctly on the chair",
-            'end_over': "You're doing well!\nKeep it up",
-            'end_under': "Stretch your legs\nwhen you stand up"
+            'good': ("You're doing well!\nKeep it up", True),
+            'start_over': ("You're doing well!\nKeep it up", True),
+            'start_under': ("Sit correctly on the chair", False),
+            'end_over': ("You're doing well!\nKeep it up", True),
+            'end_under': ("Stretch your legs\nwhen you stand up", False)
         },
         'lateral_raises': {
             'current': "good",
-            'good': "You're doing well!\nKeep it up",
-            'start_over': "Don't bring your arms\ntoo close to your body",
-            'start_under': "Bring your arms closer\nto your body",
-            'end_over': "Don't raise your arms\ntoo high",
-            'end_under': "Raise your arms higher"
+            'good': ("You're doing well!\nKeep it up", True),
+            'start_over': ("Don't bring your arms\ntoo close to your body", False),
+            'start_under': ("Bring your arms closer\nto your body", False),
+            'end_over': ("Don't raise your arms\ntoo high", False),
+            'end_under': ("Raise your arms higher", False)
         },
         'leg_extension': {
             'current': "good",
-            'good': "You're doing well!\nKeep it up",
-            'start_over': "Don't close your leg\ntoo much",
-            'start_under': "Close your leg more",
-            'end_over': "Don't lift your leg\ntoo much",
-            'end_under': "Raise your leg higher"
+            'good': ("You're doing well!\nKeep it up", True),
+            'start_over': ("Don't close your leg\ntoo much", False),
+            'start_under': ("Close your leg more", False),
+            'end_over': ("Don't lift your leg\ntoo much", False),
+            'end_under': ("Raise your leg higher", False)
         }
     }
 
@@ -106,31 +106,36 @@ class Functions:
                 'count': 0,
                 'state': 'start',
                 'start_time': 0,
-                'times': []
+                'times': [],
+                'accuracy': (0, 0)
             },
             'arms_up': {
                 'count': 0,
                 'state': 'start',
                 'start_time': 0,
-                'times': []
+                'times': [],
+                'accuracy': (0, 0)
             },
             'chair_raises': {
                 'count': 0,
                 'state': 'start',
                 'start_time': 0,
-                'times': []
+                'times': [],
+                'accuracy': (0, 0)
             },
             'lateral_raises': {
                 'count': 0,
                 'state': 'start',
                 'start_time': 0,
-                'times': []
+                'times': [],
+                'accuracy': (0, 0)
             },
             'leg_extension': {
                 'count': 0,
                 'state': 'start',
                 'start_time': 0,
-                'times': []
+                'times': [],
+                'accuracy': (0, 0)
             }
         }
 
@@ -170,22 +175,26 @@ class Functions:
                     if distance_max < distance_min:
                         self.repetitions[category]['state'] = 'end'
                         self.executions[category]['max_angle'] = [0 for i in range(len(vp.category_angles[category]))]
+                        self.update_feedback_msg(category)
                 elif self.repetitions[category]['state'] == 'end':
                     if distance_min < distance_max:
                         self.repetitions[category]['count'] += 1
                         self.repetitions[category]['state'] = 'start'
                         self.executions[category]['min_angle'] = [180 for i in range(len(vp.category_angles[category]))]
+                        self.update_feedback_msg(category)
                         self.update_times(category)
             else:
                 if self.repetitions[category]['state'] == 'start':
                     if distance_max > distance_min:
                         self.repetitions[category]['state'] = 'end'
                         self.executions[category]['min_angle'] = [180 for i in range(len(vp.category_angles[category]))]
+                        self.update_feedback_msg(category)
                 elif self.repetitions[category]['state'] == 'end':
                     if distance_min > distance_max:
                         self.repetitions[category]['count'] += 1
                         self.repetitions[category]['state'] = 'start'
                         self.executions[category]['max_angle'] = [0 for i in range(len(vp.category_angles[category]))]
+                        self.update_feedback_msg(category)
                         self.update_times(category)
 
     
@@ -204,7 +213,7 @@ class Functions:
             self.repetitions[category]['start_time'] = util.get_current_time()
 
 
-    def update_feedbacks(self, frame, tollerance=5):
+    def update_feedbacks(self, frame):
         """
         Funzione che aggiorna i feedback per l'utente.
 
@@ -212,14 +221,11 @@ class Functions:
         - frame (numpy.ndarray): frame da processare
         """
 
-        tollerance = tollerance / 100
-
         for category in self.repetitions.keys():
             angles_points = vp.category_angles[category]
 
             for angle_index in range(len(angles_points)):
                 curr_angle = util.calculate_angle(vp.extract_points(frame, angles_points[angle_index][0]), vp.extract_points(frame, angles_points[angle_index][1]), vp.extract_points(frame, angles_points[angle_index][2]))
-                interval = (self.parameters[category]["angles_max"][angle_index] - self.parameters[category]["angles_min"][angle_index]) * tollerance
 
                 if self.repetitions[category]['state'] == 'start':
                     if not self.executions[category]['reverse'] and curr_angle < self.executions[category]["min_angle"][angle_index]:
@@ -232,36 +238,65 @@ class Functions:
                     elif self.executions[category]['reverse'] and curr_angle < self.executions[category]["min_angle"][angle_index]:
                         self.executions[category]['min_angle'][angle_index] = curr_angle
 
-                if self.repetitions[category]['state'] == 'start':
-                    if not self.executions[category]['reverse']:
-                        if self.executions[category]['max_angle'][angle_index] < self.parameters[category]["angles_max"][angle_index] - interval:
-                            self.feedbacks[category]['current'] = 'end_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_over' else self.feedbacks[category]['current']
-                        elif self.executions[category]['max_angle'][angle_index] > self.parameters[category]["angles_max"][angle_index] + interval:
-                            self.feedbacks[category]['current'] = 'end_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
-                        else:
-                            self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'end_over' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
+
+    def update_feedback_msg(self, category, tollerance=5):
+        tollerance = tollerance / 100
+
+        angles_points = vp.category_angles[category]
+
+        for angle_index in range(len(angles_points)):
+            interval = (self.parameters[category]["angles_max"][angle_index] - self.parameters[category]["angles_min"][angle_index]) * tollerance
+            self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1)
+
+            if self.repetitions[category]['state'] == 'start':
+                if not self.executions[category]['reverse']:
+                    if self.executions[category]['max_angle'][angle_index] < self.parameters[category]["angles_max"][angle_index] - interval:
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1, self.repetitions[category]['accuracy'][2])
+                        self.feedbacks[category]['current'] = 'end_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_over' else self.feedbacks[category]['current']
+                    elif self.executions[category]['max_angle'][angle_index] > self.parameters[category]["angles_max"][angle_index] + interval:
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1, self.repetitions[category]['accuracy'][2])
+                        self.feedbacks[category]['current'] = 'end_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
                     else:
-                        if self.executions[category]['min_angle'][angle_index] > self.parameters[category]["angles_min"][angle_index] + interval:
-                            self.feedbacks[category]['current'] = 'end_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_over' else self.feedbacks[category]['current']
-                        elif self.executions[category]['min_angle'][angle_index] < self.parameters[category]["angles_min"][angle_index] - interval:
-                            self.feedbacks[category]['current'] = 'end_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
-                        else:
-                            self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'end_over' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
-                elif self.repetitions[category]['state'] == 'end':
-                    if not self.executions[category]['reverse']:
-                        if self.executions[category]['min_angle'][angle_index] > self.parameters[category]["angles_min"][angle_index] + interval:
-                            self.feedbacks[category]['current'] = 'start_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_over' else self.feedbacks[category]['current']
-                        elif self.executions[category]['min_angle'][angle_index] < self.parameters[category]["angles_min"][angle_index] - interval:
-                            self.feedbacks[category]['current'] = 'start_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
-                        else:
-                            self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'start_over' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                        self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'end_over' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0] + 1, self.repetitions[category]['accuracy'][1], self.repetitions[category]['accuracy'][2])
+                else:
+                    if self.executions[category]['min_angle'][angle_index] > self.parameters[category]["angles_min"][angle_index] + interval:
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1, self.repetitions[category]['accuracy'][2])
+                        self.feedbacks[category]['current'] = 'end_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_over' else self.feedbacks[category]['current']
+                    elif self.executions[category]['min_angle'][angle_index] < self.parameters[category]["angles_min"][angle_index] - interval:
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1, self.repetitions[category]['accuracy'][2])
+                        self.feedbacks[category]['current'] = 'end_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
                     else:
-                        if self.executions[category]['max_angle'][angle_index] < self.parameters[category]["angles_max"][angle_index] - interval:
-                            self.feedbacks[category]['current'] = 'start_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_over' else self.feedbacks[category]['current']
-                        elif self.executions[category]['max_angle'][angle_index] > self.parameters[category]["angles_max"][angle_index] + interval:
-                            self.feedbacks[category]['current'] = 'start_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
-                        else:
-                            self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'start_over' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                        self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'end_over' or self.feedbacks[category]['current'] == 'end_under' else self.feedbacks[category]['current']
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0] + 1, self.repetitions[category]['accuracy'][1], self.repetitions[category]['accuracy'][2])
+            elif self.repetitions[category]['state'] == 'end':
+                if not self.executions[category]['reverse']:
+                    if self.executions[category]['min_angle'][angle_index] > self.parameters[category]["angles_min"][angle_index] + interval:
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1, self.repetitions[category]['accuracy'][2])
+                        self.feedbacks[category]['current'] = 'start_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_over' else self.feedbacks[category]['current']
+                    elif self.executions[category]['min_angle'][angle_index] < self.parameters[category]["angles_min"][angle_index] - interval:
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1, self.repetitions[category]['accuracy'][2])
+                        self.feedbacks[category]['current'] = 'start_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                    else:
+                        self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'start_over' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0] + 1, self.repetitions[category]['accuracy'][1], self.repetitions[category]['accuracy'][2])
+                else:
+                    if self.executions[category]['max_angle'][angle_index] < self.parameters[category]["angles_max"][angle_index] - interval:
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1, self.repetitions[category]['accuracy'][2])
+                        self.feedbacks[category]['current'] = 'start_under' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_over' else self.feedbacks[category]['current']
+                    elif self.executions[category]['max_angle'][angle_index] > self.parameters[category]["angles_max"][angle_index] + interval:
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0], self.repetitions[category]['accuracy'][1] + 1, self.repetitions[category]['accuracy'][2])
+                        self.feedbacks[category]['current'] = 'start_over' if self.feedbacks[category]['current'] == 'good' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                    else:
+                        self.feedbacks[category]['current'] = 'good' if self.feedbacks[category]['current'] == 'start_over' or self.feedbacks[category]['current'] == 'start_under' else self.feedbacks[category]['current']
+                        #self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0] + 1, self.repetitions[category]['accuracy'][1], self.repetitions[category]['accuracy'][2])
+            
+            if self.feedbacks[category][self.feedbacks[category]['current']][1]:
+                self.repetitions[category]['accuracy'] = (self.repetitions[category]['accuracy'][0] + 1, self.repetitions[category]['accuracy'][1])
+
+            if category == 'arms_up':
+                print(self.repetitions[category]['accuracy'])
+
 
 
     def keypoints_distance(self, kp1, kp2):
@@ -294,6 +329,7 @@ class Functions:
         self.repetitions[category]['state'] = 'start'
         self.repetitions[category]['start_time'] = 0
         self.repetitions[category]['times'] = []
+        self.repetitions[category]['accuracy'] = (0, 0)
 
 
     def get_category_repetitions(self, category):
@@ -322,6 +358,20 @@ class Functions:
         """
 
         return np.mean(self.repetitions[category]['times']) if len(self.repetitions[category]['times']) > 0 else 0
+
+
+    def get_category_accuracy(self, category):
+        """
+        Restituisco l'accuratezza dell'esecuzione per una categoria specifica.
+
+        Args:
+            category (String): categoria dell'esercizio
+
+        Returns:
+            float: accuratezza dell'esecuzione
+        """
+
+        return self.repetitions[category]['accuracy'][0] / self.repetitions[category]['accuracy'][1] if self.repetitions[category]['accuracy'][1] > 0 else 0
     
 
     def get_category_phrase(self, category):
@@ -335,4 +385,4 @@ class Functions:
             String: feedback associato all'esercizio
         """
 
-        return self.feedbacks[category][self.feedbacks[category]['current']]
+        return self.feedbacks[category][self.feedbacks[category]['current']][0]
