@@ -458,25 +458,6 @@ class GUI:
         self.cap.release()
         self.root.deiconify()
         self.show_frame(self.frame_home)
-
-
-    '''def detection(self):
-        ret, frame = self.cap.read()
-        if ret:
-            frame = cv2.resize(frame, (640, 480))
-            frame_c = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            exercise, rep, trainer_phrase, keypoints = self.classification.classify(frame)
-            if self.choice_keypoints:
-                for kp in keypoints:
-                    cv2.circle(frame_c, (int(kp["x"] * frame.shape[1]), int(kp["y"] * frame.shape[0])), 5, (0, 255, 0), -1)
-            img = Image.fromarray(frame_c)
-            img = ImageTk.PhotoImage(image=img)
-            self.webcam_label.config(image=img)
-            self.webcam_label.image = img
-            self.exercise_name.config(text=exercise.replace("_", " "))
-            self.repetitions_value.config(text=rep)
-            self.trainer_text.config(text=trainer_phrase)
-        self.webcam_label.after(10, self.detection)'''
     
 
     def detection(self):

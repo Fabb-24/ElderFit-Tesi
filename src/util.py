@@ -122,6 +122,13 @@ def same_frame(frame1, frame2, threshold=0.08):
     """
     Funzione che riceve in input 2 frame e restituisce True se i keypoints sono molto simili tra loro e False altrimenti.
     La somiglianza è gestita da un valore di soglia.
+
+    Args:
+    - frame1 (Frame): primo frame
+    - frame2 (Frame): secondo frame
+
+    Returns:
+    - bool: True se i frame sono simili, False altrimenti
     """
 
     keypoints1 = frame1.get_keypoints()

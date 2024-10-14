@@ -438,7 +438,6 @@ def objective(trial, X1_train, X2_train, X3_train, y_train, X1_val, X2_val, X3_v
         optimizer = optim.Adam(model.parameters(), lr=hyperparameters['learning_rate'], weight_decay=hyperparameters['weight_decay_rate']) if hyperparameters['optimizer'] == 'adam' else optim.SGD(model.parameters(), lr=hyperparameters['learning_rate'], weight_decay=hyperparameters['weight_decay_rate'])
     else:
         optimizer = optim.Adam(model.parameters(), lr=hyperparameters['learning_rate']) if hyperparameters['optimizer'] == 'adam' else optim.SGD(model.parameters(), lr=hyperparameters['learning_rate'])
-    #optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay_rate)
     
     # Creazione dei dataloader per il training e la validazione
     train_dataset = CustomDataset(X1_train, X2_train, X3_train, y_train)
@@ -510,8 +509,7 @@ def train_best_model(best_param, X1, X2, X3, y, X1_val, X2_val, X3_val, y_val, n
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay_rate) if optimizer == 'adam' else optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay_rate)
     else:
         optimizer = optim.Adam(model.parameters(), lr=learning_rate) if optimizer == 'adam' else optim.SGD(model.parameters(), lr=learning_rate)
-    #optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay_rate)
-
+    
     # Creazione dei dataloader per il training e la validazione
     train_dataset = CustomDataset(X1, X2, X3, y)
     train_loader = DataLoader(train_dataset, batch_size=best_param['batch_size'], shuffle=False)
@@ -552,4 +550,6 @@ def create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes):
     print("Salvati in 'best_params.npy'")
     #print("\nAddestramento del modello con i migliori iperparametri...")
     #train_best_model(best_params, X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes, util.getModelsPath())
+    
+    global best_accuracy
     best_accuracy = 0.0

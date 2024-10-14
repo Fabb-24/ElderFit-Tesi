@@ -34,15 +34,15 @@ class Classification:
         self.users = Users()
 
         # Inizializzo le variabili
-        self.frames = []
-        self.last_frame = None
-        self.categories = np.load(os.path.join(util.getDatasetPath(), "categories.npy"))
-        self.predicted_exercise = []
-        self.effective_exercise = "None"
-        self.last_predicted_exercise = "None"
-        self.empty_count = 0
-        self.stop_count = 0
-        self.functions = Functions()
+        self.frames = []  # Finestra di frames
+        self.last_frame = None  # Frame precedente
+        self.categories = np.load(os.path.join(util.getDatasetPath(), "categories.npy"))  # Categorie degli esercizi
+        self.predicted_exercise = []  # Storico delle predizioni
+        self.effective_exercise = "None"  # Esercizio effettivo
+        self.last_predicted_exercise = "None"  # 
+        self.empty_count = 0  # Contatore per i frame vuoti
+        self.stop_count = 0  # Contatore per i frame fermi
+        self.functions = Functions()  # Oggetto per le funzioni di supporto
 
 
     def same_frame(self, frame1, frame2, threshold=0.05):
@@ -82,6 +82,7 @@ class Classification:
         - phrase (String): frase associata all'esercizio
         """
 
+        # costruisco il frame corrente ed estraggo i keypoints
         curr_frame = Frame(frame)
         landmarks_o = curr_frame.get_keypoints()
         landmarks = []
@@ -91,18 +92,19 @@ class Classification:
                 "y": landmark["y"]
             })
 
-        if len(self.frames) == 0 or not self.same_frame(self.frames[-1], curr_frame, threshold=0.05):  # Se il frame è diverso dal precedente, lo aggiungo alla lista
+        # Se il frame è diverso dal precedente, lo aggiungo alla finestra e resetto il contatore di frame fermi
+        if len(self.frames) == 0 or not util.same_frame(self.frames[-1], curr_frame, threshold=0.05):
             self.frames.append(curr_frame)
             self.stop_count = 0
-        else:
+        else:  # Altrimenti incremento il contatore di frame fermi
             self.stop_count += 1
-            if self.stop_count >= 15:
+            if self.stop_count >= 15:  # Se il contatore supera una certa soglia, resetto lo storico delle predizioni, l'esercizio effettivo e svuoto la finestra
                 self.predicted_exercise = ["None", "None", "None"]
                 self.effective_exercise = "None"
                 self.frames = []
-                #self.functions.reset_repetitions()
 
-        if len(self.frames) == util.getWindowSize():  # Se la lista ha raggiunto la dimensione della finestra
+        if len(self.frames) == util.getWindowSize():  # Se la lista ha raggiunto la dimensione della finestra effettuo la classificazione
+            # Calcolo i keypoints, gli angoli e l'optical flow per ogni frame nella finestra
             opticalflow = []
             for i in range(len(self.frames)):  # Per ogni frame nella lista calcolo i keypoints, gli angoli e l'optical flow
                 self.frames[i].interpolate_keypoints(self.frames[i - 1] if i > 0 else None, self.frames[i + 1] if i < len(self.frames) - 1 else None)
@@ -112,7 +114,7 @@ class Classification:
                 else:
                     opticalflow.append(np.zeros((Frame.num_opticalflow_data,)))
                 
-            # Creo i 3 input per il modello
+            # Creo i 3 input per il modello con i dati dei keypoints, degli angoli e dell'optical flow
             kp = np.array([self.frames[i].process_keypoints() for i in range(util.getWindowSize())])
             an = np.array([self.frames[i].process_angles() for i in range(util.getWindowSize())])
             of = np.array(opticalflow)
@@ -120,13 +122,13 @@ class Classification:
             X2 = of.reshape(1, util.getWindowSize(), -1)
             X3 = an.reshape(1, util.getWindowSize(), -1)
 
-            # Eseguo la predizione
+            # Eseguo la classificazione
             if self.model_lib == "keras":
                 predictions = self.model.predict([X1, X2, X3], verbose=0)
             else:
                 predictions = self.model(torch.tensor(X1, dtype=torch.float32), torch.tensor(X2, dtype=torch.float32), torch.tensor(X3, dtype=torch.float32))
                 predictions = predictions.detach().numpy()
-            #print(predictions)
+            print(predictions)
 
             # Aggiorno lo storico delle predizioni
             prediction = np.argmax(predictions, axis=1)[0]
@@ -134,32 +136,31 @@ class Classification:
             # Riduco la lunghezza dello storico a 3 e calcolo l'esercizio effettivo come quello presente piu volte
             if len(self.predicted_exercise) == 4:
                 self.predicted_exercise = self.predicted_exercise[1:]
+            print(self.predicted_exercise)
 
-            #print(self.predicted_exercise)
-
+            # Calcolo l'esercizio effettivo come quello presente piu volte
             if len(self.predicted_exercise) == 3:
                 self.effective_exercise = max(set(self.predicted_exercise), key=self.predicted_exercise.count)
             else:
                 self.effective_exercise = self.predicted_exercise[-1]
                 
+            # Se viene predetto un esercizio per la prima volta, azzero le sue ripetizioni
             if self.predicted_exercise.count(self.predicted_exercise[-1]) == 1 and self.predicted_exercise[-1] != "None":
                 self.functions.reset_category_repetitions(self.predicted_exercise[-1])
-
-            #self.last_predicted_exercise = self.effective_exercise
-            #self.frames = self.frames[int(util.getWindowSize()/2):]
+                
+            # Riduco la finestra di un frame
             self.frames = self.frames[1:]
 
-        # Se tutti i keypoints sono nulli, lo storico viene resettato, l'esercizio viene impostato a None, le ripetizioni vengono azzerate e la finestra viene svuotata
-        if all([landmark["x"] == 0 and landmark["y"] == 0 for landmark in landmarks]):
+        if all([landmark["x"] == 0 and landmark["y"] == 0 for landmark in landmarks]):  # Se tutti i keypoints sono nulli, incremento il contatore di frame vuoti
             self.empty_count += 1
-            if self.empty_count >= 10:
+            if self.empty_count >= 10:  # Se il contatore supera una certa soglia, resetto lo storico delle predizioni, l'esercizio effettivo e svuoto la finestra
                 self.predicted_exercise = ["None", "None", "None"]
                 self.effective_exercise = "None"
                 self.frames = []
-                #self.functions.reset_repetitions()
         else:
             self.empty_count = 0
 
+        # Se viene rilevato un nuovo esercizio, aggiorno le informazioni dell'utente
         if self.effective_exercise != self.last_predicted_exercise and self.last_predicted_exercise != "None":
             exer = self.last_predicted_exercise
             reps = self.functions.get_category_repetitions(exer)
@@ -168,7 +169,7 @@ class Classification:
             if reps > 2:
                 self.users.update_session(exer, reps, accuracy, avg_time)
 
-        # Aggiorno le ripetizioni
+        # Aggiorno le funzioni di supporto e calcolo il numero di ripetizioni dell'esercizio effettivo
         self.functions.update(curr_frame)
         cat_reps = self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0
 
