@@ -6,7 +6,6 @@ import os
 import threading
 import cv2
 import numpy as np
-import multiprocessing
 
 from data.dataset import Dataset
 from learning.models_pytorch import create_model
@@ -15,13 +14,21 @@ import util
 from classification.users import Users
 
 class GUI:
-    def __init__(self, root):
-        self.load_images()
-        self.cameras = []
-        self.find_cameras()
+    """
+    Classe che gestisce l'interfaccia grafica dell'applicazione.
+    """
 
-        self.root = root
-        self.root.title("ElderFit")
+    def __init__(self, root):
+        """
+        Costruttore della classe GUI.
+        """
+
+        self.load_images()  # Carica le immagini per gli elementi grafici
+        self.cameras = []  # Lista delle webcam disponibili
+        self.find_cameras()  # Trova le webcam disponibili
+
+        self.root = root  # Finestra principale
+        self.root.title("ElderFit")  # Titolo della finestra
 
         # Imposta le dimensioni della finestra
         self.root.geometry("600x400")
@@ -31,73 +38,79 @@ class GUI:
         self.container = tk.Frame(self.root)
         self.container.pack(fill="both", expand=True)
 
-        # Creiamo i tre frame/pagine
+        # Crea i tre frame/pagine
         self.frame_home = tk.Frame(self.container)
         self.frame_learning = tk.Frame(self.container)
         self.frame_login = tk.Frame(self.container)
 
-        # Posiziona entrambi i frame nel container
+        # Posiziona i frame nel container
         self.frame_home.place(relwidth=1, relheight=1)  # Frame 1 occupa tutta la finestra
         self.frame_learning.place(relwidth=1, relheight=1)  # Frame 2 occupa tutta la finestra
         self.frame_login.place(relwidth=1, relheight=1)  # Frame 3 occupa tutta la finestra
 
-        # Mostra la prima pagina (frame_home) all'avvio
-        self.show_frame(self.frame_home)
+        self.show_frame(self.frame_home)  # Mostra la prima pagina (frame_home) all'avvio
 
-        # Costruisci i contenuti di frame_home
-        self.build_frame_home()
-
-        # Costruisci i contenuti di frame_learning
-        self.build_frame_learning()
-
-        # Costruisci i contenuti di frame_login
-        self.build_frame_login()
+        self.build_frame_home()  # Costruisce i contenuti di frame_home
+        self.build_frame_learning()  # Costruisce i contenuti di frame_learning
+        self.build_frame_login()  # Costruisce i contenuti di frame_login
         
-        # Creazione dei thread
-        self.create_threads()
+        self.create_threads()  # Creazione dei thread
 
-        self.users = Users()
+        self.users = Users()  # Oggetto di gestione degli utenti
 
-        self.classification_window = None
-        self.last_frame_time = 0
-        self.classification = Classification(os.path.join(util.getBasePath(), "models", "LSTM_Combo3.pth"))
-        self.choice_keypoints = False
-        self.cap = None
+        self.classification_window = None  # Finestra di classificazione
+        self.last_frame_time = 0  # Tempo dell'ultimo frame
+        self.classification = Classification(os.path.join(util.getBasePath(), "models", "LSTM_Combo3.pth"))  # Oggetto di classificazione
+        self.choice_keypoints = False  # Scelta per visualizzare i keypoints
+        self.cap = None  # Oggetto per la cattura della webcam
 
     
     def load_images(self):
-        icon_home_first_button = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "brain_icon.png"))  # Sostituisci con il percorso della tua icona
+        """
+        Funzione che carica le immagini per gli elementi grafici.
+        """
+
+        # Home: icona per il primo pulsante
+        icon_home_first_button = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "brain_icon.png"))
         icon_home_first_button = icon_home_first_button.resize((80, 80), Image.LANCZOS)
         self.icon_home_first_button = ImageTk.PhotoImage(icon_home_first_button)
 
-        icon_home_second_button = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "exercise_icon.png"))  # Sostituisci con il percorso della tua icona
+        # Home: icona per il secondo pulsante
+        icon_home_second_button = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "exercise_icon.png"))
         icon_home_second_button = icon_home_second_button.resize((80, 80), Image.LANCZOS)
         self.icon_home_second_button = ImageTk.PhotoImage(icon_home_second_button)
 
+        # Creazione del modello: icona di attesa
         icon_model_wait = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "wait.png"))
         icon_model_wait = icon_model_wait.resize((16, 16), Image.LANCZOS)
         self.icon_model_wait = ImageTk.PhotoImage(icon_model_wait)
 
+        # Creazione del modello: icona di caricamento
         icon_model_loading = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "loading.png"))
         icon_model_loading = icon_model_loading.resize((16, 16), Image.LANCZOS)
         self.icon_model_loading = ImageTk.PhotoImage(icon_model_loading)
 
+        # Creazione del modello: icona di completamento
         icon_model_complete = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "complete.png"))
         icon_model_complete = icon_model_complete.resize((16, 16), Image.LANCZOS)
         self.icon_model_complete = ImageTk.PhotoImage(icon_model_complete)
 
+        # Creazione del modello: icona per il pulsante di avvio
         icon_model_start = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "play.png"))
         icon_model_start = icon_model_start.resize((18, 18), Image.LANCZOS)
         self.icon_model_start = ImageTk.PhotoImage(icon_model_start)
 
+        # Creazione del modello: icona per il pulsante di cancellazione
         icon_model_cancel = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "cancel.png"))
         icon_model_cancel = icon_model_cancel.resize((18, 18), Image.LANCZOS)
         self.icon_model_cancel = ImageTk.PhotoImage(icon_model_cancel)
 
+        # Creazione del modello: icona per il pulsante di indietro
         icon_model_back = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "back.png"))
         icon_model_back = icon_model_back.resize((18, 18), Image.LANCZOS)
         self.icon_model_back = ImageTk.PhotoImage(icon_model_back)
 
+        # Classificazione: icona per la persona
         icon_classification_person = Image.open(os.path.join(util.getBasePath(), "GUI_material", "icons", "person.png"))
         icon_classification_person = icon_classification_person.resize((140, 140), Image.LANCZOS)
         self.icon_classification_person = ImageTk.PhotoImage(icon_classification_person)
@@ -109,6 +122,10 @@ class GUI:
 
 
     def build_frame_home(self):
+        """
+        Funzione che costruisce il frame home con i pulsanti per l'accesso alle funzionalità dell'applicazione.
+        """
+
         # Font per il titolo con sottolineatura
         title_font = tkfont.Font(family="Arial", size=24, weight="bold", underline=True)
 
@@ -138,60 +155,71 @@ class GUI:
         button1.config(padding=(20, 20), style="Large.TButton", width=15)
         button2.config(padding=(20, 20), style="Large.TButton", width=15)
 
-        # Definisco lo stile per i pulsanti
+        # Stile per i pulsanti
         button_style = ttk.Style()
         button_style.configure("Large.TButton", font=("Arial", 14))
 
 
     def build_frame_learning(self):
+        """
+        Funzione che costruisce il frame per la creazione del modello di classificazione.
+        """
+
+        # Frasi ed elementi delle fasi di creazione del modello
         self.phases = {
             "names": ["Creating the dataset", "Model training"],
             "elements": []
         }
 
+        # Titolo della finestra di creazione del modello
         self.model_title = tk.Label(self.frame_learning, text="Create the model", font=("Arial", 24))
         self.model_title.pack(pady=50)
 
-        # creazione di un frame centrale per le label
+        # Creazione di un frame centrale per le label
         process_frame = tk.Frame(self.frame_learning)
         process_frame.pack(pady=40)
 
+        # Font per le fasi
         phase_font = tkfont.Font(family="Arial", size=14)
 
-        for i, phase in enumerate(self.phases["names"]):
+        for i, phase in enumerate(self.phases["names"]):  # Per ogni fase
+            # Label per la frase della fase
             label = tk.Label(process_frame, text=phase, font=phase_font)
             label.grid(row=i, column=0, sticky="w", padx=(0, 20), pady=(0, 10))
-
+            # Frame per le informazioni della fase
             info_frame = tk.Frame(process_frame)
             info_frame.grid(row=i, column=1, sticky="e", padx=(20, 0))
-
+            # Label per il conteggio di avanzamento della fase
             count_label = tk.Label(info_frame, text="", font=phase_font)
             count_label.grid(row=0, column=0, sticky="e", pady=(0, 10))
-
+            # Label per l'icona di stato della fase
             icon_label = tk.Label(info_frame, image=self.icon_model_wait)
             icon_label.image = self.icon_model_wait
             icon_label.grid(row=0, column=1, sticky="w", padx=(5, 0), pady=(0, 10))
-
+            # Aggiunta degli elementi alla lista delle fasi
             self.phases["elements"].append((count_label, icon_label))
 
         # Frame che contiene i due pulsanti
         button_frame = tk.Frame(self.frame_learning)
         button_frame.pack()
 
-        # Definisco lo stile per i pulsanti
+        # Stile per i pulsanti
         button_style = ttk.Style()
         button_style.configure("ModelButtons.TButton", font=("Arial", 14))
 
+        # Pulsante per tornare indietro
         self.model_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=lambda: self.show_frame(self.frame_home))
         self.model_back_button.image = self.icon_model_back
         self.model_back_button.grid(row=0, column=0, padx=(0, 10))
         self.model_back_button.config(style="ModelButtons.TButton")
 
+        # Pulsante per avviare la creazione del modello
         self.model_play_button = ttk.Button(button_frame, text="Start", image=self.icon_model_start, compound="left", command=lambda: self.on_play_button_click())
         self.model_play_button.image = self.icon_model_start
         self.model_play_button.grid(row=0, column=1, padx=(10, 10))
         self.model_play_button.config(style="ModelButtons.TButton")
 
+        # Pulsante per annullare la creazione del modello
         self.model_cancel_button = ttk.Button(button_frame, text="Cancel", image=self.icon_model_cancel, compound="left", state="disabled", command=lambda: self.on_cancel_button_click())
         self.model_cancel_button.image = self.icon_model_cancel
         self.model_cancel_button.grid(row=0, column=2, padx=(10, 0))
@@ -199,6 +227,10 @@ class GUI:
 
 
     def build_frame_login(self):
+        """
+        Funzione che costruisce il frame per il login e la registrazione degli utenti.
+        """
+
         # Titolo della finestra di login
         title = tk.Label(self.frame_login, text="Login / Registration", font=("Arial", 24))
         title.pack(pady=(40, 30))
@@ -207,21 +239,19 @@ class GUI:
         input_frame = tk.Frame(self.frame_login)
         input_frame.pack(pady=10)
 
-        # font
+        # font per le label e gli entry
         label_font = ("Arial", 16)
         entry_font = ("Arial", 15)
 
         # Campo Username
         label_username = tk.Label(input_frame, text="Username:", font=label_font)
         label_username.pack(anchor="w", padx=5)
-
         self.entry_username = tk.Entry(input_frame, width=30, font=entry_font)  # Campo di testo più grande
         self.entry_username.pack(fill="x", padx=5, pady=5)
 
         # Campo Password
         label_password = tk.Label(input_frame, text="Password:", font=label_font)
         label_password.pack(anchor="w", padx=5)
-
         self.entry_password = tk.Entry(input_frame, show="*", width=30, font=entry_font)  # Campo di testo più grande
         self.entry_password.pack(fill="x", padx=5, pady=5)
 
@@ -233,15 +263,17 @@ class GUI:
         button_frame = tk.Frame(self.frame_login)
         button_frame.pack(pady=(20, 10))
 
-        # Definisco lo stile per i pulsanti
+        # Stile per i pulsanti
         button_style = ttk.Style()
         button_style.configure("LoginButtons.TButton", font=("Arial", 14))
 
+        # Pulsante per tornare indietro
         login_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=self.back_login)
         login_back_button.image = self.icon_model_back
         login_back_button.grid(row=0, column=0, padx=(10, 10))
         login_back_button.config(style="LoginButtons.TButton")
 
+        # Pulsante per effettuare il login
         login_enter_button = ttk.Button(button_frame, text="Login", image=self.icon_model_start, compound="left", command=self.login)
         login_enter_button.image = self.icon_model_start
         login_enter_button.grid(row=0, column=1, padx=(10, 10))
@@ -250,16 +282,17 @@ class GUI:
 
     def create_classification_window(self):
         """
-        Funzione che crea la finestra per la classificazione degli esercizi.
-        Viene creata una finestra di tipo Toplevel che contiene la webcam, le informazioni sull'esercizio rilevato, le impostazioni e le frasi del trainer.
+        Funzione che crea la finestra per la classificazione degli esercizi e gestione delle varie funzionalità.
         """
         
+        # Se la finestra di classificazione è già aperta, la riporta in primo piano
         if self.classification_window is not None and self.classification_window.winfo_exists():
             self.classification_window.lift()
             return
 
-        self.root.withdraw()
+        self.root.withdraw()  # Nasconde la finestra principale
 
+        # Creazione della finestra di classificazione con titolo
         self.classification_window = tk.Toplevel(self.root)
         self.classification_window.title("ElderFit - Exercise Detection")
         self.classification_window.protocol("WM_DELETE_WINDOW", self.close_classification_window)
@@ -267,7 +300,6 @@ class GUI:
         # Imposta le dimensioni della finestra
         self.classification_window.geometry("1000x700")
         self.classification_window.resizable(False, False)
-
         self.classification_window.columnconfigure(1, weight=1)
 
         # Frame per la parte sinistra
@@ -328,7 +360,7 @@ class GUI:
         repetitions_label = tk.Label(frame_repetitions, text="Repetitions:", font=("Arial", 16))
         repetitions_label.grid(row=0, column=0, sticky="w", padx=5)
 
-        # label ripetizioni
+        # label ripetizioni valore
         self.repetitions_value = tk.Label(frame_repetitions, text="0", font=("Arial", 16))
         self.repetitions_value.grid(row=0, column=1, sticky="e", padx=5)
 
@@ -384,6 +416,7 @@ class GUI:
         frame_buttons.columnconfigure(0, weight=1)
         frame_buttons.columnconfigure(1, weight=1)
 
+        # stile per i pulsanti
         button_style = ttk.Style()
         button_style.configure("ModelButtons.TButton", font=("Arial", 14))
 
