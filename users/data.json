@@ -1,1 +1,167 @@
-{"admin": {"13-10-2024-12-19-32": {"arms_up": {"reps": 15, "accuracy": 0.8095238095238095, "avg_time": 2.6068891750441656}}, "14-10-2024-19-12-50": {"arms_up": {"reps": 15, "accuracy": 1.0, "avg_time": 3.1355660237963234}, "leg_extension": {"reps": 14, "accuracy": 0.05172413793103448, "avg_time": 3.1046309287731466}}}}
+{
+    "admin": {
+      "01-10-2024-10-30-45": {
+        "arms_up": {
+          "reps": 15,
+          "accuracy": 0.75,
+          "avg_time": 3.2
+        },
+        "arms_extension": {
+          "reps": 12,
+          "accuracy": 0.70,
+          "avg_time": 3.5
+        },
+        "chair_raises": {
+          "reps": 10,
+          "accuracy": 0.60,
+          "avg_time": 4.1
+        },
+        "leg_extension": {
+          "reps": 14,
+          "accuracy": 0.65,
+          "avg_time": 3.8
+        },
+        "lateral_raises": {
+          "reps": 13,
+          "accuracy": 0.72,
+          "avg_time": 3.7
+        }
+      },
+      "04-10-2024-11-15-22": {
+        "arms_up": {
+          "reps": 16,
+          "accuracy": 0.78,
+          "avg_time": 3.0
+        },
+        "arms_extension": {
+          "reps": 12,
+          "accuracy": 0.73,
+          "avg_time": 3.4
+        },
+        "chair_raises": {
+          "reps": 11,
+          "accuracy": 0.62,
+          "avg_time": 3.9
+        },
+        "leg_extension": {
+          "reps": 15,
+          "accuracy": 0.68,
+          "avg_time": 3.6
+        },
+        "lateral_raises": {
+          "reps": 14,
+          "accuracy": 0.75,
+          "avg_time": 3.5
+        }
+      },
+      "07-10-2024-12-40-50": {
+        "arms_up": {
+          "reps": 17,
+          "accuracy": 0.80,
+          "avg_time": 2.9
+        },
+        "arms_extension": {
+          "reps": 14,
+          "accuracy": 0.76,
+          "avg_time": 3.3
+        },
+        "chair_raises": {
+          "reps": 12,
+          "accuracy": 0.65,
+          "avg_time": 3.7
+        },
+        "leg_extension": {
+          "reps": 16,
+          "accuracy": 0.70,
+          "avg_time": 3.4
+        },
+        "lateral_raises": {
+          "reps": 15,
+          "accuracy": 0.77,
+          "avg_time": 3.3
+        }
+      },
+      "10-10-2024-14-25-33": {
+        "arms_up": {
+          "reps": 18,
+          "accuracy": 0.82,
+          "avg_time": 2.7
+        },
+        "arms_extension": {
+          "reps": 14,
+          "accuracy": 0.78,
+          "avg_time": 3.2
+        },
+        "chair_raises": {
+          "reps": 13,
+          "accuracy": 0.68,
+          "avg_time": 3.6
+        },
+        "leg_extension": {
+          "reps": 17,
+          "accuracy": 0.72,
+          "avg_time": 3.2
+        },
+        "lateral_raises": {
+          "reps": 16,
+          "accuracy": 0.79,
+          "avg_time": 3.2
+        }
+      },
+      "13-10-2024-09-50-45": {
+        "arms_up": {
+          "reps": 19,
+          "accuracy": 0.85,
+          "avg_time": 2.6
+        },
+        "arms_extension": {
+          "reps": 15,
+          "accuracy": 0.80,
+          "avg_time": 3.0
+        },
+        "chair_raises": {
+          "reps": 14,
+          "accuracy": 0.70,
+          "avg_time": 3.5
+        },
+        "leg_extension": {
+          "reps": 18,
+          "accuracy": 0.75,
+          "avg_time": 3.1
+        },
+        "lateral_raises": {
+          "reps": 17,
+          "accuracy": 0.81,
+          "avg_time": 3.1
+        }
+      },
+      "16-10-2024-08-45-20": {
+        "arms_up": {
+          "reps": 20,
+          "accuracy": 0.87,
+          "avg_time": 2.5
+        },
+        "arms_extension": {
+          "reps": 16,
+          "accuracy": 0.82,
+          "avg_time": 2.9
+        },
+        "chair_raises": {
+          "reps": 15,
+          "accuracy": 0.72,
+          "avg_time": 3.4
+        },
+        "leg_extension": {
+          "reps": 19,
+          "accuracy": 0.78,
+          "avg_time": 3.0
+        },
+        "lateral_raises": {
+          "reps": 18,
+          "accuracy": 0.83,
+          "avg_time": 3.0
+        }
+      }
+    }
+  }
+  
