@@ -445,17 +445,27 @@ class GUI:
 
 
     def back_login(self):
+        """
+        Funzione che torna alla home dalla finestra di login
+        """
+        
         self.show_frame(self.frame_home)
         self.error_label.config(text="")
 
 
     def login(self):
+        """
+        Funzione che gestisce il login dell'utente
+        """
+
+        # Recupero delle credenziali e controllo che non siano vuote
         username = self.entry_username.get()
         password = self.entry_password.get()
         if username == "" or password == "":
             self.error_label.config(text="Username and password are required")
             return
 
+        # Controllo se l'utente esiste e se la password è corretta
         if self.users.login(username, password):
             self.entry_username.delete(0, tk.END)
             self.entry_password.delete(0, tk.END)
@@ -466,10 +476,16 @@ class GUI:
 
 
     def show_video_tutorial(self):
+        """
+        Funzione che mostra il tutorial dell'esercizio selezionato.
+        """
+
+        # Ottengo la selezione dalla lista degli esercizi e apro il video corrispondente
         exercise = self.exercises_list.get(self.exercises_list.curselection()).replace(" ", "_")
         tutorial_path = os.path.join(util.getVideoInfoPath(), f"{exercise}.mp4")
         cap_tutorial = cv2.VideoCapture(tutorial_path)
-        while True:
+
+        while True:  # Riproduco il video del tutorial in una finestra
             ret, frame = cap_tutorial.read()
             if ret:
                 # Scritta per indicare come chiudere la finestra
@@ -481,11 +497,17 @@ class GUI:
                     break
             else:
                 break
+        
+        # Chiudo la finestra del tutorial
         cap_tutorial.release()
         cv2.destroyAllWindows()
 
     
     def close_classification_window(self):
+        """
+        Funzione che chiude la finestra di classificazione e riporta in primo piano la finestra principale
+        """
+
         self.classification_window.destroy()
         self.classification_window = None
         self.cap.release()
@@ -494,29 +516,54 @@ class GUI:
     
 
     def detection(self):
+        """
+        Funzione che gestisce la classificazione degli esercizi.
+        """
+
         def update_classification(frame_w, exercise, rep, trainer_phrase, keypoints):
+            """
+            Funzione interna per l'aggiornamento della classificazione.
+
+            Args:
+                frame_w (np.ndarray): Frame della webcam.
+                exercise (str): Nome dell'esercizio rilevato.
+                rep (int): Numero di ripetizioni rilevate.
+                trainer_phrase (str): Frase del trainer.
+                keypoints (list): Lista dei keypoints rilevati.
+            """
+
             frame_c = cv2.cvtColor(frame_w, cv2.COLOR_BGR2RGB)
-            if self.choice_keypoints:
+            if self.choice_keypoints:  # Visualizzazione dei keypoints se selezionato
                 for kp in keypoints:
                     cv2.circle(frame_c, (int(kp["x"] * frame.shape[1]), int(kp["y"] * frame.shape[0])), 5, (0, 255, 0), -1)
+            # Processo l'immagine e la visualizzo nella finestra
             img = Image.fromarray(frame_c)
             img = ImageTk.PhotoImage(image=img)
             self.webcam_label.config(image=img)
             self.webcam_label.image = img
+            # Aggiorno le informazioni dell'esercizio rilevato: nome, ripetizioni e frase del trainer
             self.exercise_name.config(text=exercise.replace("_", " "))
             self.repetitions_value.config(text=rep)
             self.trainer_text.config(text=trainer_phrase)
         
+        # Acquisizione del frame dalla webcam e classificazione
         ret, frame = self.cap.read()
         if ret:
             frame = cv2.resize(frame, (640, 480))
             self.classification.classify(frame, update_classification)
+        # Richiamo la funzione dopo 10 ms
         self.webcam_label.after(10, self.detection)
 
 
+    # ========================================================================================================
     # EVENTI E FUNZIONI
+    # ========================================================================================================
 
     def find_cameras(self):
+        """
+        Funzione che trova le webcam disponibili.
+        """
+
         for i in range(10):
             cap = cv2.VideoCapture(i)
             if cap.read()[0]:
@@ -527,28 +574,57 @@ class GUI:
 
     
     def on_webcam_selected(self, event):
+        """
+        Funzione che gestisce la selezione della webcam.
+        """
+        
         self.cap.release()
         self.cap = cv2.VideoCapture(self.cameras[self.webcam_menu.current()])
 
 
     def on_choice_keypoints(self):
+        """
+        Funzione che gestisce la scelta per visualizzare i keypoints.
+        """
+
         self.choice_keypoints = self.keypoint_var.get()
 
 
     def create_threads(self):
+        """
+        Funzione che crea i thread per la creazione del dataset e del modello.
+        """
+
         def update_progress_dataset(processed_videos, total_videos):
+            """
+            Funzione interna per l'aggiornamento del progresso della creazione del dataset.
+
+            Args:
+                processed_videos (int): Numero di video processati.
+                total_videos (int): Numero totale di video
+            """
+
             self.phases["elements"][0][0].config(text=f"{processed_videos}/{total_videos}")
 
         def start_creation_dataset():
+            """
+            Funzione interna per avviare la creazione del dataset.
+            """
+
             Dataset().create(callback=update_progress_dataset)
         
         def start_creation_model():
+            """
+            Funzione interna per avviare la creazione del modello.
+            """
+
             # Carico i dati di training e di validation
             X1, X2, X3, y, num_classes = util.get_dataset("train")
             X1_test, X2_test, X3_test, y_test, _ = util.get_dataset("test")
             # Addestramento
             create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes)
 
+        # Creazione dei thread e impostazione delle variabili di controllo
         self.dataset_thread = threading.Thread(target=start_creation_dataset)
         self.model_thread = threading.Thread(target=start_creation_model)
         self.dataset_thread_interrupted = False
@@ -556,16 +632,29 @@ class GUI:
 
 
     def show_frame(self, frame):
+        """
+        Funzione che mostra un frame/pagina.
+
+        Args:
+            frame (tk.Frame): Frame da mostrare.
+        """
+
         if frame == self.frame_learning:
             self.model_title.config(text="Create the model")
         frame.tkraise()
 
 
     def on_play_button_click(self):
+        """
+        Funzione che gestisce il click sul pulsante di avvio della creazione del modello.
+        """
+
+        # Disabilita e abilita i pulsanti necessari
         self.model_play_button.config(state="disabled")
         self.model_cancel_button.config(state="normal")
         self.model_back_button.config(state="disabled")
         self.model_title.config(text="Model creation in progress...")
+        # Impostazione delle icone di caricamento
         self.phases["elements"][0][1].config(image=self.icon_model_loading)
         self.phases["elements"][0][1].image = self.icon_model_loading
         self.phases["elements"][1][1].config(image=self.icon_model_wait)
@@ -573,28 +662,34 @@ class GUI:
         
         # Creazione del dataset
         self.dataset_thread.start()
-
         self.dataset_thread_finished()
 
 
     def dataset_thread_finished(self):
-        if self.dataset_thread.is_alive():
-            self.root.after(100, self.dataset_thread_finished)
-        else:
-            if not self.dataset_thread_interrupted:
+        """
+        Funzione che gestisce la fine del thread di creazione del dataset.
+        """
+
+        if self.dataset_thread.is_alive(): # Finchè il thread è attivo
+            self.root.after(100, self.dataset_thread_finished) # Richiama la funzione dopo 100 ms
+        else:  # Se il thread è concluso
+            if not self.dataset_thread_interrupted:  # Se il thread non è stato interrotto
+                # Impostazione delle icone di completamento e caricamento
                 self.phases["elements"][0][1].config(image=self.icon_model_complete)
                 self.phases["elements"][0][1].image = self.icon_model_complete
                 self.phases["elements"][1][1].config(image=self.icon_model_loading)
                 self.phases["elements"][1][1].image = self.icon_model_loading
                 self.model_cancel_button.config(state="disabled")
-
+                # Avvio del thread di creazione del modello
                 self.model_thread.start()
                 self.model_thread_finished()
-            else:
+            else:  # Se il thread è stato interrotto
                 self.model_title.config(text="Model creation interrupted")
+                # Impostazione delle icone di attesa
                 self.phases["elements"][0][1].config(image=self.icon_model_wait)
                 self.phases["elements"][0][1].image = self.icon_model_wait
                 self.phases["elements"][0][0].config(text="")
+                # Abilitazione dei pulsanti
                 self.model_play_button.config(state="normal")
                 self.model_back_button.config(state="normal")
                 self.dataset_thread_interrupted = False
@@ -605,24 +700,32 @@ class GUI:
     
 
     def model_thread_finished(self):
-        if self.model_thread.is_alive():
-            self.root.after(100, self.model_thread_finished)
-        else:
-            if not self.model_thread_interrupted:
+        """
+        Funzione che gestisce la fine del thread di creazione del modello.
+        """
+
+        if self.model_thread.is_alive():  # Se il thread è attivo
+            self.root.after(100, self.model_thread_finished)  # Richiama la funzione dopo 100 ms
+        else:  # Se il thread è concluso
+            if not self.model_thread_interrupted:  # Se il thread non è stato interrotto
                 self.model_title.config(text="Model creation complete")
+                # Impostazione delle icone di completamento
                 self.phases["elements"][1][1].config(image=self.icon_model_complete)
                 self.phases["elements"][1][1].image = self.icon_model_complete
+                # Abilitazione e disabilitazione dei pulsanti
                 self.model_play_button.config(state="normal")
                 self.model_cancel_button.config(state="disabled")
                 self.model_back_button.config(state="normal")
-            else:
+            else:  # Se il thread è stato interrotto
                 self.model_title.config(text="Model creation interrupted")
+                # Impostazione delle icone di attesa
                 self.phases["elements"][0][1].config(image=self.icon_model_wait)
                 self.phases["elements"][0][1].image = self.icon_model_wait
                 self.phases["elements"][1][1].config(image=self.icon_model_wait)
                 self.phases["elements"][1][1].image = self.icon_model_wait
                 self.phases["elements"][0][0].config(text="")
                 self.phases["elements"][1][0].config(text="")
+                # Abilitazione dei pulsanti
                 self.model_play_button.config(state="normal")
                 self.model_back_button.config(state="normal")
                 self.model_thread_interrupted = False
@@ -633,16 +736,22 @@ class GUI:
 
 
     def on_cancel_button_click(self):
-        if self.dataset_thread.is_alive():
+        """
+        Funzione che gestisce il click sul pulsante di cancellazione della creazione del modello.
+        """
+
+        if self.dataset_thread.is_alive():  # Se il thread del dataset è attivo
+            # Disabilita il pulsante e imposta il titolo
             self.model_cancel_button.config(state="disabled")
             self.model_title.config(text="Interrupting the process...")
             self.dataset_thread_interrupted = True
+            # Interrompe il thread del dataset
             Dataset().stop()
-        elif self.model_thread.is_alive():
+        elif self.model_thread.is_alive():  # Se il thread del modello è attivo
+            # Disabilita il pulsante e imposta il titolo
             self.model_cancel_button.config(state="disabled")
             self.model_title.config(text="Interrupting the process...")
             self.model_thread_interrupted = True
-            pass
 
 def start_application():
     """
