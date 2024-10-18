@@ -324,7 +324,7 @@ class GUI:
         trainer_canvas.grid(row=0, column=1)
         trainer_canvas.create_rectangle(10, 10, 440, 140, outline='black', width=2)
         trainer_canvas.create_text(220, 10, text="Trainer", font=("Arial", 12), justify="left", anchor="n")
-        self.trainer_text = tk.Label(trainer_frame, text="Hello! I'm your personal trainer.\nI will help you to do the exercises correctly.\nLet's start!", font=("Arial", 16))
+        self.trainer_text = tk.Label(trainer_frame, text="Hello! I'm your personal trainer.\nI will help you to do the exercises correctly.\nLet's start!", font=("Arial", 18))
         trainer_canvas.create_window(220, 80, window=self.trainer_text)
 
         # Frame per la parte destra
