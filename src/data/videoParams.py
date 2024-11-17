@@ -13,11 +13,11 @@ class VideoParams:
         'chair_raises': [
             [8, 7, 10]
         ],
-        'lateral_raises': [
+        'arms_lateral': [
             [3, 1, 7],
             [4, 2, 8]
         ],
-        'leg_extension': [
+        'leg_lateral': [
             [7, 8, 10],
             [8, 7, 9]
         ]

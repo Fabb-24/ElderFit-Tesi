@@ -14,6 +14,12 @@ from data.dataAugmentation import Videos
 if __name__ == "__main__":
     start_application()
 
+'''content = np.load(os.path.join(util.getParametersPath(), "parameters.npy"), allow_pickle=True).item()
+print(content)'''
+
+'''content['arms_up']['angles_max'] = 46.0
+np.save(os.path.join(util.getParametersPath(), "parameters.npy"), content)'''
+
 # Valuto il modello
 '''model = util.get_pytorch_model(os.path.join(util.getModelsPath(), "LSTM_Combo3.pth"))
 X1_test, X2_test, X3_test, y_test, num_classes = util.get_dataset("test")

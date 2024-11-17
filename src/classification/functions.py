@@ -39,12 +39,12 @@ class Functions:
                 'min_angle': [],
                 'reverse': False
             },
-            'lateral_raises': {
+            'arms_lateral': {
                 'max_angle': [],
                 'min_angle': [],
                 'reverse': False
             },
-            'leg_extension': {
+            'leg_lateral': {
                 'max_angle': [],
                 'min_angle': [],
                 'reverse': False
@@ -82,7 +82,7 @@ class Functions:
             'end_over': ("You're doing well!\nKeep it up", True),
             'end_under': ("Stretch your legs\nwhen you stand up", False)
         },
-        'lateral_raises': {
+        'arms_lateral': {
             'current': "good",
             'good': ("You're doing well!\nKeep it up", True),
             'start_over': ("Don't bring your arms\ntoo close to your body", False),
@@ -90,7 +90,7 @@ class Functions:
             'end_over': ("Don't raise your arms\ntoo high", False),
             'end_under': ("Raise your arms higher", False)
         },
-        'leg_extension': {
+        'leg_lateral': {
             'current': "good",
             'good': ("You're doing well!\nKeep it up", True),
             'start_over': ("Don't close your leg\ntoo much", False),
@@ -128,14 +128,14 @@ class Functions:
                 'times': [],
                 'accuracy': (0, 0)
             },
-            'lateral_raises': {
+            'arms_lateral': {
                 'count': 0,
                 'state': 'start',
                 'start_time': 0,
                 'times': [],
                 'accuracy': (0, 0)
             },
-            'leg_extension': {
+            'leg_lateral': {
                 'count': 0,
                 'state': 'start',
                 'start_time': 0,

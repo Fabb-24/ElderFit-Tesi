@@ -1,4 +1,3 @@
-import math
 import cv2
 import numpy as np
 import util
@@ -10,10 +9,11 @@ class Frame:
 
     # Quantità di dati facenti parte del dataset per ogni feature
     num_keypoints_data = 36
+    num_angles_data = 8
     num_opticalflow_data = 24
     num_mediapipe_keypoints = 33
 
-    angleDict = {  # angoli articolari
+    angles_dict = {  # angoli articolari
         'left_elbow': [5, 3, 1],
         'right_elbow': [2, 4, 6],
         'left_shoulder': [3, 1, 7],
@@ -83,8 +83,8 @@ class Frame:
         """
 
         angles = []
-        for angle in Frame.angleDict:
-            angle_keypoints = Frame.angleDict[angle]
+        for angle in Frame.angles_dict:
+            angle_keypoints = Frame.angles_dict[angle]
             angle = util.calculate_angle(self.keypoints[angle_keypoints[0]], self.keypoints[angle_keypoints[1]], self.keypoints[angle_keypoints[2]])
             angles.append(angle)
         self.angles = angles
@@ -205,15 +205,17 @@ class Frame:
         processed_keypoints = np.delete(kp, 0, axis=0)
 
         # Normalizzo le coordinate x e y in base alla lunghezza del corpo (distanza tra i fianchi)
-        norm = math.sqrt((kp_copy[7]["x"] - kp_copy[8]["x"])**2 + (kp_copy[7]["y"] - kp_copy[8]["y"])**2)
+        '''norm = math.sqrt((kp_copy[7]["x"] - kp_copy[8]["x"])**2 + (kp_copy[7]["y"] - kp_copy[8]["y"])**2)
         for i in range(len(kp) - 1):
             processed_keypoints[i][0] /= norm if norm != 0 else 1
             processed_keypoints[i][1] /= norm if norm != 0 else 1
             processed_keypoints[i][2] /= norm if norm != 0 else 1
-        processed_keypoints = np.array(processed_keypoints)
+        processed_keypoints = np.array(processed_keypoints)'''
 
         # Elimino da ogni punto la visibility rendendo l'array di dimensione (12, 3)
         processed_keypoints = np.delete(processed_keypoints, 3, axis=1)
+        # Elimino la coordinata z
+        #processed_keypoints = np.delete(processed_keypoints, 2, axis=1)
         # Rendo l'array keypoints da dimensione (12, 3) a (36, 1)
         processed_keypoints = processed_keypoints.flatten()
 

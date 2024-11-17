@@ -207,7 +207,7 @@ def create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes):
 
     # Esegui la ricerca degli iperparametri
     tuner.search([X1, X2, X3], y, 
-                epochs=20,
+                epochs=30,
                 validation_data=validation_data,
                 callbacks=[early_stopping, metrics_callback])
 
@@ -218,6 +218,6 @@ def create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes):
     best_model = tuner.get_best_models(num_models=1)[0]
 
     # Salva il modello
-    best_model.save(os.path.join(util.getModelsPath(), "LSTM_Combo3.h5"))
+    best_model.save(os.path.join(util.getModelsPath(), "LSTM_Combo3_new.h5"))
 
     return best_model

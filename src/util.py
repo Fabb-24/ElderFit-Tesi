@@ -4,11 +4,11 @@ import os
 from dotenv import load_dotenv
 import numpy as np
 import mediapipe as mp
-import tensorflow as tf
-import tensorflow_hub as hub
+#import tensorflow as tf
+#import tensorflow_hub as hub
 import torch
 
-from learning.models_pytorch import MultiInputLSTM
+from learning.models_pytorch_no import MultiInputLSTM
 
 load_dotenv()
 
@@ -152,9 +152,9 @@ def get_pytorch_model(model_path):
     - model (nn.Module): modello PyTorch
     """
 
-    best_params = np.load(os.path.join(getModelsPath(), "best_params.npy"), allow_pickle=True).item()
+    best_params = np.load(os.path.join(getModelsPath(), "best_params_full.npy"), allow_pickle=True).item()
     model = MultiInputLSTM(
-        best_params['X1_size'], best_params['X2_size'], best_params['X3_size'],
+        best_params['X1_size'], best_params['X2_size'],
         best_params['hidden_size_1'], best_params['hidden_size_2'], best_params['hidden_size_3'],
         best_params['num_classes'], best_params['dropout_rate'])
     model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
@@ -252,6 +252,29 @@ def get_current_time():
     return datetime.datetime.now().timestamp()
 
 
+def get_videos():
+    """
+    Funzione che restituisce un dizionario contenente tutti i video.
+    Il dizionario ha come chiave il nome dell'esercizio (cartella) e come valore una lista contenente i nomi dei video.
+
+    Args:
+    - folder_path (str): Il percorso della cartella contenente i video suddivisi in cartelle per classe
+
+    Returns:
+    - dict: Un dizionario contenente i percorsi dei video
+    """
+
+    videos = {}
+    videos_path = getVideoPath()
+    for exercise in os.listdir(videos_path):
+        videos[exercise] = []
+        for type in os.listdir(os.path.join(videos_path, exercise)):
+            for video in os.listdir(os.path.join(videos_path, exercise, type)):
+                videos[exercise].append((os.path.join(videos_path, exercise, type, video)))
+                
+    return videos
+
+
 
 # ================================================================== #
 # ================ FUNZIONI PER IL RECUPERO DEI PATH =============== #
@@ -299,7 +322,7 @@ def getDatasetPath():
         str: il percorso della cartella del dataset
     """
 
-    return os.path.join(getBasePath(), "dataset", os.getenv("DATASET_TRAIN_PATH"))
+    return os.path.join(getBasePath(), "dataset_full", os.getenv("DATASET_TRAIN_PATH"))
 
 
 def getDatasetTestPath():
@@ -310,7 +333,7 @@ def getDatasetTestPath():
         str: il percorso della cartella del dataset di test
     """
 
-    return os.path.join(getBasePath(), "dataset", os.getenv("DATASET_TEST_PATH"))
+    return os.path.join(getBasePath(), "dataset_full", os.getenv("DATASET_TEST_PATH"))
 
 
 def getModelsPath():
@@ -332,7 +355,7 @@ def getParametersPath():
         str: il percorso della cartella dei parametri
     """
 
-    return os.path.join(getBasePath(), "dataset", os.getenv("PARAMETERS_PATH"))
+    return os.path.join(getBasePath(), "dataset_full", os.getenv("PARAMETERS_PATH"))
 
 
 def getUsersPath():

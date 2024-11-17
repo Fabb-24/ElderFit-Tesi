@@ -9,7 +9,7 @@ import numpy as np
 
 from data.dataset import Dataset
 from learning.models_pytorch import create_model
-from classification.classification import Classification
+from classification.classification_2 import Classification
 import util
 from classification.users import Users
 
@@ -60,7 +60,7 @@ class GUI:
 
         self.classification_window = None  # Finestra di classificazione
         self.last_frame_time = 0  # Tempo dell'ultimo frame
-        self.classification = Classification(os.path.join(util.getBasePath(), "models", "LSTM_Combo3.pth"))  # Oggetto di classificazione
+        self.classification = Classification(os.path.join(util.getBasePath(), "models", "LSTM_Combo3_full.pth"))  # Oggetto di classificazione
         self.choice_keypoints = False  # Scelta per visualizzare i keypoints
         self.cap = None  # Oggetto per la cattura della webcam
 

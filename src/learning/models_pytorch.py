@@ -517,7 +517,7 @@ def train_best_model(best_param, X1, X2, X3, y, X1_val, X2_val, X3_val, y_val, n
     val_loader = DataLoader(val_dataset, batch_size=best_param['batch_size'], shuffle=False)
 
     train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, num_epochs=best_param['num_epochs'])  # Addestramento del modello
-    save_model(model, os.path.join(save_path, 'LSTM_Combo3.pth'))  # Salvataggio del modello
+    save_model(model, os.path.join(save_path, 'LSTM_Combo3_new.pth'))  # Salvataggio del modello
     print("Modello salvato con successo")
 
 

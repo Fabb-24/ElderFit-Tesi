@@ -1,4 +1,4 @@
-import tensorflow as tf
+#import tensorflow as tf
 import torch
 import numpy as np
 import util
@@ -24,8 +24,9 @@ class Classification:
 
         # Se model path è un file che finisce con .h5, allora carico un modello keras
         if model_path.endswith(".h5"):
-            self.model = tf.keras.models.load_model(model_path)
-            self.model_lib = "keras"
+            #self.model = tf.keras.models.load_model(model_path)
+            #self.model_lib = "keras"
+            pass
         else:
             self.model = util.get_pytorch_model(model_path)
             self.model_lib = "pytorch"
@@ -126,7 +127,7 @@ class Classification:
             if self.model_lib == "keras":
                 predictions = self.model.predict([X1, X2, X3], verbose=0)
             else:
-                predictions = self.model(torch.tensor(X1, dtype=torch.float32), torch.tensor(X2, dtype=torch.float32), torch.tensor(X3, dtype=torch.float32))
+                predictions = self.model(torch.tensor(X1, dtype=torch.float32), torch.tensor(X3, dtype=torch.float32))
                 predictions = predictions.detach().numpy()
             print(predictions)
 
@@ -134,12 +135,12 @@ class Classification:
             prediction = np.argmax(predictions, axis=1)[0]
             self.predicted_exercise.append(self.categories[prediction] if predictions[0][prediction] > self.threshold else "None")
             # Riduco la lunghezza dello storico a 3 e calcolo l'esercizio effettivo come quello presente piu volte
-            if len(self.predicted_exercise) == 4:
+            if len(self.predicted_exercise) == 7:
                 self.predicted_exercise = self.predicted_exercise[1:]
             print(self.predicted_exercise)
 
             # Calcolo l'esercizio effettivo come quello presente piu volte
-            if len(self.predicted_exercise) == 3:
+            if len(self.predicted_exercise) >= 3:
                 self.effective_exercise = max(set(self.predicted_exercise), key=self.predicted_exercise.count)
             else:
                 self.effective_exercise = self.predicted_exercise[-1]
