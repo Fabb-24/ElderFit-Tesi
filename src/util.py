@@ -322,7 +322,7 @@ def getDatasetPath():
         str: il percorso della cartella del dataset
     """
 
-    return os.path.join(getBasePath(), "dataset_full", os.getenv("DATASET_TRAIN_PATH"))
+    return os.path.join(getBasePath(), "dataset", os.getenv("DATASET_TRAIN_PATH"))
 
 
 def getDatasetTestPath():
@@ -333,7 +333,7 @@ def getDatasetTestPath():
         str: il percorso della cartella del dataset di test
     """
 
-    return os.path.join(getBasePath(), "dataset_full", os.getenv("DATASET_TEST_PATH"))
+    return os.path.join(getBasePath(), "dataset", os.getenv("DATASET_TEST_PATH"))
 
 
 def getModelsPath():
@@ -355,7 +355,7 @@ def getParametersPath():
         str: il percorso della cartella dei parametri
     """
 
-    return os.path.join(getBasePath(), "dataset_full", os.getenv("PARAMETERS_PATH"))
+    return os.path.join(getBasePath(), "dataset", os.getenv("PARAMETERS_PATH"))
 
 
 def getUsersPath():

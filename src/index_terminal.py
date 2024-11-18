@@ -55,10 +55,10 @@ def learning():
 
     num_classes -= 1'''
 
-    create_model_2(X1, X2, y, X1_test, X2_test, y_test, num_classes)
+    #create_model_2(X1, X2, y, X1_test, X2_test, y_test, num_classes)
 
-    #best_params = np.load(os.path.join(util.getModelsPath(), "best_params_full.npy"), allow_pickle=True).item()
-    #train_best_model(best_params, X1, X2, y, X1_test, X2_test, y_test, num_classes, util.getModelsPath())
+    best_params = np.load(os.path.join(util.getModelsPath(), "best_params_full.npy"), allow_pickle=True).item()
+    train_best_model(best_params, X1, X2, y, X1_test, X2_test, y_test, num_classes, util.getModelsPath())
 
 
 if __name__ == "__main__":

@@ -556,6 +556,12 @@ def train_best_model(best_param, X1, X2, y, X1_val, X2_val, y_val, num_classes, 
         dropout_rate=best_param['dropout_rate']
     ).to(device)
 
+    X1_train_tensor = torch.from_numpy(X1).float()
+    X2_train_tensor = torch.from_numpy(X2).float()
+    summary(model, 
+            input_size=[(1, X1_train_tensor.shape[1], X1_train_tensor.shape[2]), (1, X2_train_tensor.shape[1], X2_train_tensor.shape[2])],
+            col_names=["output_size", "num_params", "kernel_size", "mult_adds"])
+
     criterion = nn.BCELoss()  # Funzione di loss Binary Cross Entropy
     
     # Definizione dell'ottimizzatore in base al regolarizzatore

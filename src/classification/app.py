@@ -268,10 +268,10 @@ class GUI:
         button_style.configure("LoginButtons.TButton", font=("Arial", 14))
 
         # Pulsante per tornare indietro
-        login_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=self.back_login)
+        '''login_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=self.back_login)
         login_back_button.image = self.icon_model_back
         login_back_button.grid(row=0, column=0, padx=(10, 10))
-        login_back_button.config(style="LoginButtons.TButton")
+        login_back_button.config(style="LoginButtons.TButton")'''
 
         # Pulsante per effettuare il login
         login_enter_button = ttk.Button(button_frame, text="Login", image=self.icon_model_start, compound="left", command=self.login)
