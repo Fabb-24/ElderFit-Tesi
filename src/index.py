@@ -4,6 +4,7 @@ from classification.app import start_application
 from graphviz import Digraph
 import util
 import os
+import time
 from learning.models_pytorch import evaluate_model, CustomDataset
 import numpy as np
 from learning.models_pytorch import create_model
@@ -14,10 +15,17 @@ from data.dataAugmentation import Videos
 if __name__ == "__main__":
     start_application()
 
-'''content = np.load(os.path.join(util.getParametersPath(), "parameters.npy"), allow_pickle=True).item()
-print(content)'''
+'''timestamp = util.get_current_time()
+print(timestamp)
+while True:
+    if util.get_current_time() - timestamp > 30:
+        break
+print(timestamp)'''
 
-'''content['arms_up']['angles_max'] = 46.0
+'''content = np.load(os.path.join(util.getParametersPath(), "parameters.npy"), allow_pickle=True).item()
+print(content)
+
+content['arms_up']['angles_max'] = 46.0
 np.save(os.path.join(util.getParametersPath(), "parameters.npy"), content)'''
 
 # Valuto il modello

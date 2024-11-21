@@ -45,6 +45,8 @@ class Classification:
         self.empty_count = 0  # Contatore per i frame vuoti
         self.stop_count = 0  # Contatore per i frame fermi
         self.functions = Functions()  # Oggetto per le funzioni di supporto
+        self.timestampt_last_rep = 0  # Timestamp dell'ultima ripetizione contata
+        self.time_to_none = 30  # Tempo necessario per determinare quando non si sta eseguendo nessun esercizio
     
 
     def classify(self, frame, callback):
@@ -137,8 +139,16 @@ class Classification:
                             self.functions.reset_category_repetitions(self.effective_exercise)
                         # Aggiungo una ripetizione all'esercizio effettivo e resetto l'ultimo frame per tutte le categorie di esercizi
                         self.functions.add_category_repetition(self.effective_exercise)
+                        self.timestampt_last_rep = util.get_current_time()
                         self.functions.reset_all_last_frame()
                         self.last_predicted_exercise = self.effective_exercise
+
+        '''# Se sono passati 30 secondi dall'ultimo conteggio della ripetizione, resetto la predizione effettiva e svuoto le finestre
+        if util.get_current_time() - self.timestampt_last_rep > self.time_to_none:
+            self.effective_exercise = "None"
+            self.frames = []
+            self.keypoints = []
+            self.angles = []'''
 
         # Ripetizioni dell'esercizio effettivo
         cat_reps = self.functions.get_category_repetitions(self.effective_exercise) if self.effective_exercise != "None" else 0
