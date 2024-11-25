@@ -1,9 +1,9 @@
 import os
 import numpy as np
-from data.dataset_full_2 import Dataset
-from data.dataAugmentation_full import Videos
+from data.dataset import Dataset
+from data.data_augmentation import Videos
 #from learning.models_keras import create_model
-from learning.models_pytorch_no import create_model, create_model_2, train_best_model
+from learning.models_pytorch import create_model, train_best_model
 import util
 from classification.app import start_application
 
@@ -55,7 +55,7 @@ def learning():
 
     num_classes -= 1'''
 
-    #create_model_2(X1, X2, y, X1_test, X2_test, y_test, num_classes)
+    #create_model(X1, X2, y, X1_test, X2_test, y_test, num_classes)
 
     best_params = np.load(os.path.join(util.getModelsPath(), "best_params_full.npy"), allow_pickle=True).item()
     train_best_model(best_params, X1, X2, y, X1_test, X2_test, y_test, num_classes, util.getModelsPath())

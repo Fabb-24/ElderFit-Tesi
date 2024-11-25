@@ -9,7 +9,7 @@ import numpy as np
 
 from data.dataset import Dataset
 from learning.models_pytorch import create_model
-from classification.classification_2 import Classification
+from classification.classification import Classification
 import util
 from classification.users import Users
 
@@ -60,7 +60,7 @@ class GUI:
 
         self.classification_window = None  # Finestra di classificazione
         self.last_frame_time = 0  # Tempo dell'ultimo frame
-        self.classification = Classification(os.path.join(util.getBasePath(), "models", "LSTM_Combo3_full.pth"))  # Oggetto di classificazione
+        self.classification = Classification(os.path.join(util.getBasePath(), "models", "LSTM_Combo2.pth"))  # Oggetto di classificazione
         self.choice_keypoints = False  # Scelta per visualizzare i keypoints
         self.cap = None  # Oggetto per la cattura della webcam
 
@@ -268,10 +268,10 @@ class GUI:
         button_style.configure("LoginButtons.TButton", font=("Arial", 14))
 
         # Pulsante per tornare indietro
-        '''login_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=self.back_login)
+        login_back_button = ttk.Button(button_frame, text="Back", image=self.icon_model_back, compound="left", command=self.back_login)
         login_back_button.image = self.icon_model_back
         login_back_button.grid(row=0, column=0, padx=(10, 10))
-        login_back_button.config(style="LoginButtons.TButton")'''
+        login_back_button.config(style="LoginButtons.TButton")
 
         # Pulsante per effettuare il login
         login_enter_button = ttk.Button(button_frame, text="Login", image=self.icon_model_start, compound="left", command=self.login)
@@ -298,7 +298,7 @@ class GUI:
         self.classification_window.protocol("WM_DELETE_WINDOW", self.close_classification_window)
 
         # Imposta le dimensioni della finestra
-        self.classification_window.geometry("1000x700")
+        self.classification_window.geometry("1000x740")
         self.classification_window.resizable(False, False)
         self.classification_window.columnconfigure(1, weight=1)
 
@@ -312,7 +312,7 @@ class GUI:
 
         # Frame per il trainer
         trainer_frame = tk.Frame(left_frame_classification)
-        trainer_frame.pack(pady=20)
+        trainer_frame.pack(pady=(40, 20))
 
         # Label per l'immagine del trainer
         trainer_label = tk.Label(trainer_frame, image=self.icon_classification_person)
@@ -364,13 +364,18 @@ class GUI:
         self.repetitions_value = tk.Label(frame_repetitions, text="0", font=("Arial", 16))
         self.repetitions_value.grid(row=0, column=1, sticky="e", padx=5)
 
+        # pulsante di fine esercizio
+        end_exercise_button = ttk.Button(right_frame_classification, text="End exercise", image=self.icon_model_cancel, compound="left", command=lambda: self.classification.stop_exercise())
+        end_exercise_button.grid(row=3, column=0, pady=(10, 10), sticky="ew")
+        end_exercise_button.config(style="ModelButtons.TButton")
+
         # titolo impostazioni
         settings_title = tk.Label(right_frame_classification, text="Settings", font=("Arial", 20, "bold"))
-        settings_title.grid(row=3, column=0, pady=(20, 10), sticky="ew")
+        settings_title.grid(row=4, column=0, pady=(20, 10), sticky="ew")
 
         # frame selezione webcam
         frame_webcam = tk.Frame(right_frame_classification)
-        frame_webcam.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
+        frame_webcam.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
         frame_webcam.columnconfigure(0, weight=1)
         frame_webcam.columnconfigure(1, weight=1)
 
@@ -385,7 +390,7 @@ class GUI:
 
         # frame per la scelta dei keypoint
         frame_keypoint = tk.Frame(right_frame_classification)
-        frame_keypoint.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
+        frame_keypoint.grid(row=6, column=0, pady=(0, 10), sticky="nsew")
         frame_keypoint.columnconfigure(0, weight=1)
         frame_keypoint.columnconfigure(1, weight=1)
 
@@ -400,19 +405,19 @@ class GUI:
 
         # titolo lista esercizi
         exercises_title = tk.Label(right_frame_classification, text="Exercise tutorial", font=("Arial", 20, "bold"))
-        exercises_title.grid(row=6, column=0, pady=(20, 10), sticky="ew")
+        exercises_title.grid(row=7, column=0, pady=(20, 10), sticky="ew")
 
         # lista scorrevole degli esercizi
         exercises = np.load(os.path.join(util.getDatasetPath(), "categories.npy"))        
         self.exercises_list = tk.Listbox(right_frame_classification, font=("Arial", 16), selectmode="single", height=10)
         for exercise in exercises:
             self.exercises_list.insert(tk.END, exercise.replace("_", " "))
-        self.exercises_list.grid(row=7, column=0, pady=(0, 20), sticky="nsew")
+        self.exercises_list.grid(row=8, column=0, pady=(0, 20), sticky="nsew")
         self.exercises_list.selection_set(0)
 
         # frame per i pulsanti
         frame_buttons = tk.Frame(right_frame_classification)
-        frame_buttons.grid(row=8, column=0, pady=(0, 10), sticky="nsew")
+        frame_buttons.grid(row=9, column=0, pady=(0, 10), sticky="nsew")
         frame_buttons.columnconfigure(0, weight=1)
         frame_buttons.columnconfigure(1, weight=1)
 

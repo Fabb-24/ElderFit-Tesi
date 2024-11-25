@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import os
 import util
-from data.dataAugmentation import Videos
+from data.data_augmentation_old import Videos
 from keras.layers import LSTM, Dense, Dropout, Input, Concatenate
 from keras.optimizers import Adam, SGD
 from keras.models import Model

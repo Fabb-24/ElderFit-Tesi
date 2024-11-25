@@ -1,9 +1,11 @@
 import os
+import cv2
 import numpy as np
 import tqdm
 from imblearn.over_sampling import SMOTE
-from data.video import Video
+#from data.video import Video
 from data.frame_mediapipe import Frame
+from data.video_params import VideoParams
 import util
 from dotenv import load_dotenv
 
@@ -12,6 +14,7 @@ load_dotenv()
 class Dataset:
 
     stop_creation = False
+    window_size = 8
 
     def __init__(self):
         """
@@ -20,6 +23,33 @@ class Dataset:
         
         self.videos = []
         self.labels = []
+        self.rep_per_video = 10
+        '''self.rep_per_video = {
+            "arms_lateral": {
+                "1": 8
+            },
+            "arms_up": {
+                "1": 8,
+                "2": 10
+            },
+            "leg_lateral": {
+                "1": 10
+            },
+            "arms_extension": {
+                "1": 8
+            },
+            "chair_raises": {
+                "1": 8
+            },
+            "seated_crunch": {
+                "1": 10,
+                "2": 10
+            },
+            "knee_up": {
+                "1": 10,
+                "2": 10
+            }
+        }'''
 
 
     def oversampling(self, X, y):
@@ -50,23 +80,6 @@ class Dataset:
         return X_resampled, y_resampled
 
 
-    @staticmethod
-    def process_video(video_info):
-        """
-        Funzione che processa un video.
-
-        Args:
-        - video_info (tuple): Una tupla contenente il path del video e la categoria di appartenenza.
-
-        Returns:
-        - video (Video): Il video processato.
-        """
-
-        video = Video(video_info[0], video_info[1])
-        print(f"{video_info[0]} processed")
-        return video
-
-
     def create(self, callback=None):
         """
         Funzione che crea il dataset per l'addestramento.
@@ -83,43 +96,85 @@ class Dataset:
         categories = [d for d in os.listdir(util.getVideoPath())]  # Ottengo le categorie di esercizi
         np.save(os.path.join(util.getDatasetPath(), "categories.npy"), categories)  # Salvo le categorie in un file npy
 
+        # Ottengo il numero totale di video da processare
+        total_videos = 0
+        videos = util.get_videos()
+        for category in videos:
+            total_videos += len(videos[category])
+        if callback:
+            callback(0, total_videos)
+
         labels = []
         parameters = {}
         processed_videos = 0
 
-        # Ottengo il numero totale di video da processare
-        total_videos = 0
-        for category in categories:
-            total_videos += len([d for d in os.listdir(os.path.join(util.getVideoPath(), category))])
-        if callback:
-            callback(0, total_videos)        
-        
-        for category in categories:  # Processo i video categoria per categoria
-            video_category_path = os.path.join(util.getVideoPath(), category)
-            subvideos = [d for d in os.listdir(video_category_path)]
-            parameters[category] = []  # Inizializzo la lista dei parametri per la categoria
+        for category in videos:  # Per ogni categoria di esercizi
+            parameters[category] = []
 
-            for video_name in tqdm.tqdm(subvideos, desc=f"Analizzo la categoria {category}", unit="video"):  # Processo tutti i video della categoria
-                video_path = os.path.join(video_category_path, video_name)
-                video = Video(video_path, category)  # Process del video
+            for video_path in tqdm.tqdm(videos[category], desc=f"Analizzo la categoria {category}", unit="video"):  # Per ogni video della categoria
+                # Estraggo tutti i frame, creao per ognuno un oggetto Frame e lo aggiungo alla lista video_frames
+                cap = cv2.VideoCapture(video_path)
+                video_frames = []
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    video_frames.append(Frame(frame))
+                cap.release()
 
-                parameters[category].append(video.get_parameters())
-                keypoints = []
-                opticalflow = []
-                angles = []
+                # Interpolo i keypoints e calcolo gli angoli per ogni frame
+                for i in range(len(video_frames)):
+                    video_frames[i].interpolate_keypoints(video_frames[i - 1] if i > 0 else None, video_frames[i + 1] if i < len(video_frames) - 1 else None)
+                    video_frames[i].extract_angles()
 
-                for window in video.get_windows():  # Aggiornamento delle features
-                    keypoints.append(window.get_keypoints())
-                    opticalflow.append(window.get_opticalflow())
-                    angles.append(window.get_angles())
+                # Creo una lista di keypoints e angoli per ogni frame che contengono i keypoints e gli angoli processati di tutti i frame
+                keypoints_frames = []
+                angles_frames = []
+                for frame in video_frames:
+                    keypoints_frames.append(frame.process_keypoints())
+                    angles_frames.append(frame.process_angles())
+                
+                '''params = VideoParams(video_frames, category)
+                parameters[category].append(params.extract_parameters())'''
 
-                # Salvataggio graduale delle features e delle labels per evitare di saturare la memoria
-                util.save_data(keypoints, os.path.join(util.getDatasetPath(), "keypoints.npy"))
-                util.save_data(opticalflow, os.path.join(util.getDatasetPath(), "opticalflow.npy"))
-                util.save_data(angles, os.path.join(util.getDatasetPath(), "angles.npy"))
-                labels.extend([category for _ in range(video.get_num_windows())])
+                # Ottengo parametri utili alla divisione dei video e alla creazione delle finestre
+                video_name = os.path.basename(video_path)
+                #rep_per_video_eff = self.rep_per_video[category][video_name.split(".")[0]]
+                rep_per_video_eff = self.rep_per_video
+                frames_per_rep = len(video_frames) // rep_per_video_eff
+                frames_interval = frames_per_rep // Dataset.window_size
+                windows_keypoints = []
+                windows_angles = []
 
-                del video  # Eliminazione del video per liberare memoria
+                # Estraggo i parametri utilizzando le ripetizioni dei video e non il video intero
+                for i in range(0, rep_per_video_eff):
+                    params = VideoParams(video_frames[i * frames_per_rep: (i * frames_per_rep) + frames_per_rep], category)
+                    parameters[category].append(params.extract_parameters())
+
+                for i in range(0, rep_per_video_eff):
+                    if i != 0 and i != rep_per_video_eff - 1:
+                        for k in range(-5, 6):
+                            windows_keypoints.append(keypoints_frames[i * frames_per_rep + k: (i * frames_per_rep + k) + Dataset.window_size * frames_interval: frames_interval])
+                            windows_angles.append(angles_frames[i * frames_per_rep + k: (i * frames_per_rep + k) + Dataset.window_size * frames_interval: frames_interval])
+                    elif i == 0:
+                        for k in range(0, 6):
+                            windows_keypoints.append(keypoints_frames[i * frames_per_rep + k: (i * frames_per_rep + k) + Dataset.window_size * frames_interval: frames_interval])
+                            windows_angles.append(angles_frames[i * frames_per_rep + k: (i * frames_per_rep + k) + Dataset.window_size * frames_interval: frames_interval])
+                    else:
+                        for k in range(-5, 1):
+                            windows_keypoints.append(keypoints_frames[i * frames_per_rep + k: (i * frames_per_rep + k) + Dataset.window_size * frames_interval: frames_interval])
+                            windows_angles.append(angles_frames[i * frames_per_rep + k: (i * frames_per_rep + k) + Dataset.window_size * frames_interval: frames_interval])
+
+                # se sono state create finestre di dimensione diversa da window_size, stampo "errore"
+                #print(len(windows_keypoints))
+                for w in windows_keypoints[-90:]:
+                    if len(w) != Dataset.window_size:
+                        print("ERRORE")
+
+                util.save_data(windows_keypoints, os.path.join(util.getDatasetPath(), "keypoints.npy"))
+                util.save_data(windows_angles, os.path.join(util.getDatasetPath(), "angles.npy"))
+                labels.extend([category for _ in range(len(windows_keypoints))])
+
                 processed_videos += 1
 
                 if callback:
@@ -130,59 +185,44 @@ class Dataset:
 
             if Dataset.stop_creation:
                 break
-            
-        
-        avg_all = {}
-        for category in categories:  # Per ognuna delle categorie
-            category_parameters = parameters[category]  # Parametri della categoria: lista di dizionari con keypoints_max, keypoints_min, angles_max, angles_min
-            avg_category = {}
-            for key in category_parameters[0].keys():  # Per ogni chiave del dizionario (keypoints_max, keypoints_min, angles_max, angles_min)
-                avg_category[key] = [None for _ in range(len(category_parameters[0][key]))]
-                for i in range(len(category_parameters[0][key])):  # Per ogni elemento della chiave
-                    if key == 'keypoints_max' or key == 'keypoints_min':
-                        avg_category[key][i] = [None for _ in range(len(category_parameters[0][key][i]))]
-                        for j in range(len(category_parameters[0][key][i])):  # per ogni elemento della lista
-                            mean = []
-                            for k in range(len(category_parameters)):  # Per ogni elemento della categoria
-                                mean.append(category_parameters[k][key][i][j])
-                            avg_category[key][i][j] = np.mean(mean)
-                    else:
+
+        new_parameters = {}
+        for category in categories:
+            avg_all = {}
+            for key in parameters[category][0].keys():
+                if "keypoints" in key:
+                    kp_mean = []
+                    for i in range(len(parameters[category][0][key])):
                         mean = []
-                        for k in range(len(category_parameters)):
-                            mean.append(category_parameters[k][key][i])
-                        avg_category[key][i] = np.mean(mean)
-            avg_all[category] = avg_category
-        parameters = avg_all
+                        for j in range(len(parameters[category])):
+                            mean.append(parameters[category][j][key][i])
+                        kp_mean.append(np.mean(mean))
+                    avg_all[key] = kp_mean
+                else:
+                    mean = []
+                    for j in range(len(parameters[category])):
+                        mean.append(parameters[category][j][key])
+                    avg_all[key] = np.mean(mean)
+            new_parameters[category] = avg_all
+        parameters = new_parameters
 
 
-        # Salvo le labels in un file npy
+        np.save(os.path.join(util.getParametersPath(), "parameters.npy"), parameters)
         np.save(os.path.join(util.getDatasetPath(), "labels.npy"), labels)
-        
+
         if not Dataset.stop_creation:
-            # Oversampling del dataset
-            # Ottengo i dataset appena creati
             kp = np.load(os.path.join(util.getDatasetPath(), "keypoints.npy"), allow_pickle=True)
-            of = np.load(os.path.join(util.getDatasetPath(), "opticalflow.npy"), allow_pickle=True)
             an = np.load(os.path.join(util.getDatasetPath(), "angles.npy"), allow_pickle=True)
             labels = np.load(os.path.join(util.getDatasetPath(), "labels.npy"), allow_pickle=True)
-            # Concateno le features
-            features = util.concatenate_features(kp, of)
-            features = util.concatenate_features(features, an)
-            # Applico l'oversampling
-            features, labels = self.oversampling(features, labels)
-            # Divido le features in keypoints e opticalflow e angles
+            features = util.concatenate_features(kp, an)
+            #features, labels = self.oversampling(features, labels)
             num_keypoints_data = Frame.num_keypoints_data
-            num_opticalflow_data = Frame.num_opticalflow_data
+            num_angles_data = Frame.num_angles_data
             kp = features[:, :, :num_keypoints_data]
-            of = features[:, :, num_keypoints_data:num_keypoints_data + num_opticalflow_data]
-            an = features[:, :, num_keypoints_data + num_opticalflow_data:]
-            # Salvo i nuovi dataset
+            an = features[:, :, num_keypoints_data:]
             np.save(os.path.join(util.getDatasetPath(), "keypoints.npy"), kp)
-            np.save(os.path.join(util.getDatasetPath(), "opticalflow.npy"), of)
             np.save(os.path.join(util.getDatasetPath(), "angles.npy"), an)
             np.save(os.path.join(util.getDatasetPath(), "labels.npy"), labels)
-            # Creo il file dei parametri
-            np.save(os.path.join(util.getParametersPath(), "parameters.npy"), parameters)
         else:
             Dataset.stop_creation = False
 

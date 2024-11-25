@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+from torchinfo import summary
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import optuna
 import util
@@ -14,7 +15,14 @@ import util
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 best_accuracy = 0.0
+accuracies = []
+train_losses = []
+val_losses = []
 
+
+# ======================================================================================================================
+#                                            EARLY STOPPING
+# ======================================================================================================================
 
 class EarlyStopping:
     """
@@ -69,8 +77,54 @@ class EarlyStopping:
         """
 
         torch.save(model.state_dict(), path)
-        print("Model saved as checkpoint")
+        #print("Model saved as checkpoint")
 
+
+
+# ======================================================================================================================
+#                                                 MODEL
+# ======================================================================================================================
+
+class RamoLSTM(nn.Module):
+    """
+    Classe che definisce un ramo di input per il modello LSTM.
+    """
+
+    def __init__(self, input_size, hidden_size_1, hidden_size_2, dropout_rate):
+        """
+        Costruttore della classe ramoLstm. Inizializza i layer LSTM e i layer fully connected.
+
+        Args:
+        - input_size (int): dimensione dell'input.
+        - hidden_size_1 (int): dimensione dell'hidden state del primo layer LSTM.
+        - hidden_size_2 (int): dimensione dell'hidden state del secondo layer LSTM.
+        - dropout_rate (float): rate di dropout.
+        """
+
+        super(RamoLSTM, self).__init__()
+
+        self.lstm1 = nn.LSTM(input_size, hidden_size_1, 1, batch_first=True, bidirectional=False)
+        self.dropout1 = nn.Dropout(dropout_rate)
+        self.lstm2 = nn.LSTM(hidden_size_1, hidden_size_2, 1, batch_first=True, bidirectional=False)
+        self.dropout2 = nn.Dropout(dropout_rate)
+
+    def forward(self, x):
+        """
+        Funzione che definisce il forward pass del modello.
+
+        Args:
+        - x (torch.Tensor): input del modello.
+
+        Returns:
+        - out (torch.Tensor): output del modello.
+        """
+
+        out, _ = self.lstm1(x)
+        out = self.dropout1(out)
+        out, _ = self.lstm2(out)
+        out = self.dropout2(out)
+        out = out[:, -1, :]
+        return out
 
 
 class MultiInputLSTM(nn.Module):
@@ -78,7 +132,7 @@ class MultiInputLSTM(nn.Module):
     Classe che definisce il modello LSTM a tre input.
     """
 
-    def __init__(self, input_size_1, input_size_2, input_size_3, hidden_size_1, hidden_size_2, hidden_size_3, num_classes, dropout_rate):
+    def __init__(self, input_size_1, input_size_2, hidden_size_1, hidden_size_2, hidden_size_3, num_classes, dropout_rate):
         """
         Costruttore della classe MultiInputLSTM. Inizializza i layer LSTM e i layer fully connected.
 
@@ -95,7 +149,7 @@ class MultiInputLSTM(nn.Module):
 
         super(MultiInputLSTM, self).__init__()
 
-        self.lstm1_1 = nn.LSTM(input_size_1, hidden_size_1, 1, batch_first=True, bidirectional=False)
+        '''self.lstm1_1 = nn.LSTM(input_size_1, hidden_size_1, 1, batch_first=True, bidirectional=False)
         self.dropout1_1 = nn.Dropout(dropout_rate)
         self.lstm2_1 = nn.LSTM(hidden_size_1, hidden_size_2, 1, batch_first=True, bidirectional=False)
         self.dropout2_1 = nn.Dropout(dropout_rate)
@@ -103,14 +157,11 @@ class MultiInputLSTM(nn.Module):
         self.lstm1_2 = nn.LSTM(input_size_2, hidden_size_1, 1, batch_first=True, bidirectional=False)
         self.dropout1_2 = nn.Dropout(dropout_rate)
         self.lstm2_2 = nn.LSTM(hidden_size_1, hidden_size_2, 1, batch_first=True, bidirectional=False)
-        self.dropout2_2 = nn.Dropout(dropout_rate)
-
-        self.lstm1_3 = nn.LSTM(input_size_3, hidden_size_1, 1, batch_first=True, bidirectional=False)
-        self.dropout1_3 = nn.Dropout(dropout_rate)
-        self.lstm2_3 = nn.LSTM(hidden_size_1, hidden_size_2, 1, batch_first=True, bidirectional=False)
-        self.dropout2_3 = nn.Dropout(dropout_rate)
+        self.dropout2_2 = nn.Dropout(dropout_rate)'''
+        self.ramo1 = RamoLSTM(input_size_1, hidden_size_1, hidden_size_2, dropout_rate)
+        self.ramo2 = RamoLSTM(input_size_2, hidden_size_1, hidden_size_2, dropout_rate)
         
-        self.fc1 = nn.Linear(hidden_size_2 * 3, hidden_size_3)
+        self.fc1 = nn.Linear(hidden_size_2 * 2, hidden_size_3)
         self.relu = nn.ReLU()
         self.dropout_4 = nn.Dropout(dropout_rate)
         self.fc2 = nn.Linear(hidden_size_3, num_classes)
@@ -129,7 +180,7 @@ class MultiInputLSTM(nn.Module):
             elif 'bias' in name:
                 init.constant_(param, 0.0)
     
-    def forward(self, x1, x2, x3):
+    def forward(self, x1, x2):
         """
         Funzione che definisce il forward pass del modello con i tre input.
 
@@ -142,7 +193,10 @@ class MultiInputLSTM(nn.Module):
         - out (torch.Tensor): output del modello.
         """
 
-        out1, _ = self.lstm1_1(x1)
+        out1 = self.ramo1(x1)
+        out2 = self.ramo2(x2)
+
+        '''out1, _ = self.lstm1_1(x1)
         out1 = self.dropout1_1(out1)
         out1, _ = self.lstm2_1(out1)
         out1 = self.dropout2_1(out1)
@@ -152,30 +206,28 @@ class MultiInputLSTM(nn.Module):
         out2 = self.dropout1_2(out2)
         out2, _ = self.lstm2_2(out2)
         out2 = self.dropout2_2(out2)
-        out2 = out2[:, -1, :]
+        out2 = out2[:, -1, :]'''
 
-        out3, _ = self.lstm1_3(x3)
-        out3 = self.dropout1_3(out3)
-        out3, _ = self.lstm2_3(out3)
-        out3 = self.dropout2_3(out3)
-        out3 = out3[:, -1, :]
-
-        concatenated = torch.cat((out1, out2, out3), 1)
+        concatenated = torch.cat((out1, out2), 1)
         out = self.fc1(concatenated)
-        out = torch.nn.functional.relu(out)
+        #out = torch.nn.functional.relu(out)
         out = self.relu(out)
         out = self.dropout_4(out)
         out = self.fc2(out)
         out = self.sigmoid(out)
         return out
-    
+
+
+# ======================================================================================================================
+#                                                       DATASET
+# ======================================================================================================================
 
 class CustomDataset(Dataset):
     """
     Classe che definisce un dataset custom per PyTorch.
     """
 
-    def __init__(self, X1, X2, X3, y):
+    def __init__(self, X1, X2, y):
         """
         Costruttore della classe CustomDataset.
 
@@ -188,7 +240,7 @@ class CustomDataset(Dataset):
 
         self.X1 = torch.tensor(X1, dtype=torch.float32)
         self.X2 = torch.tensor(X2, dtype=torch.float32)
-        self.X3 = torch.tensor(X3, dtype=torch.float32)
+        #self.X3 = torch.tensor(X3, dtype=torch.float32)
         self.y = torch.tensor(y, dtype=torch.float32)
 
     def __len__(self):
@@ -215,11 +267,15 @@ class CustomDataset(Dataset):
         - y[idc] (torch.Tensor): label.
         """
 
-        return self.X1[idx], self.X2[idx], self.X3[idx], self.y[idx]
+        return self.X1[idx], self.X2[idx], self.y[idx]
     
 
 
-def train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, num_epochs=20, patience=5, trial=None):
+# ======================================================================================================================
+#                                            TRAINING AND EVALUATION
+# ======================================================================================================================
+
+def train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, X1_val, X2_val, y_val, num_epochs=20, patience=5, trial=None):
     """
     Funzione che addestra un modello.
 
@@ -244,15 +300,15 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
     for epoch in range(num_epochs):
         epoch_loss = 0
 
-        for X1_batch, X2_batch, X3_batch, y_batch in train_loader:
+        for X1_batch, X2_batch, y_batch in train_loader:
             # Spostamento dei tensori sul dispositivo (cpu o gpu)
             X1_batch = X1_batch.to(device)
             X2_batch = X2_batch.to(device)
-            X3_batch = X3_batch.to(device)
+            #X3_batch = X3_batch.to(device)
             y_batch = y_batch.to(device)
 
             optimizer.zero_grad()  # Resetto i gradienti
-            outputs = model(X1_batch, X2_batch, X3_batch)  # Forward pass
+            outputs = model(X1_batch, X2_batch)  # Forward pass
             loss = criterion(outputs, y_batch)  # Calcolo della loss
 
             if regularizer == 'l1':  # Nel caso di regolarizzazione L1 si aggiunge il termine di regolarizzazione alla loss
@@ -264,7 +320,8 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
             optimizer.step()  # Aggiornamento dei pesi
             epoch_loss += loss.item()  # Aggiornamento della loss
 
-        print(f"\nEpoch {epoch + 1}/{num_epochs}\nTraining Loss: {epoch_loss / len(train_loader):.4f}")  # Stampa della loss di training
+        print(f"\nEpoch {epoch + 1}/{num_epochs} - Training Loss: {epoch_loss / len(train_loader):.4f};", end=" ")  # Stampa della loss di training
+        train_losses.append(epoch_loss / len(train_loader))
 
         # Validation
         model.eval()  # Modello impostato in modalità valutazione
@@ -273,14 +330,14 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
         val_true_labels = []  # Inizializzazione delle label reali
 
         with torch.no_grad():
-            for X1_val_batch, X2_val_batch, X3_val_batch, y_val_batch in val_loader:
+            for X1_val_batch, X2_val_batch, y_val_batch in val_loader:
                 # Spostamento dei tensori sul dispositivo (cpu o gpu)
                 X1_val_batch = X1_val_batch.to(device)
                 X2_val_batch = X2_val_batch.to(device)
-                X3_val_batch = X3_val_batch.to(device)
+                #X3_val_batch = X3_val_batch.to(device)
                 y_val_batch = y_val_batch.to(device)
 
-                outputs = model(X1_val_batch, X2_val_batch, X3_val_batch)  # Forward pass della validazione
+                outputs = model(X1_val_batch, X2_val_batch)  # Forward pass della validazione
                 loss = criterion(outputs, y_val_batch)  # Calcolo della loss della validazione
                 val_loss += loss.item()  # Aggiornamento della loss della validazione
 
@@ -288,13 +345,19 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
                 val_true_labels.extend(y_val_batch.cpu().numpy())  # Aggiornamento delle label reali
 
         avg_val_loss = val_loss / len(val_loader)
-        print(f"Validation Loss: {avg_val_loss:.4f}")  # Stampa della loss di validazione
+        print(f"Validation Loss: {avg_val_loss:.4f};", end=" ")  # Stampa della loss di validazione
+        val_losses.append(avg_val_loss)
+
+        # accuracy del modello all'epoca corrente
+        #accuracy = accuracy_score(val_true_labels, np.argmax(val_predictions, axis=1))
+        accuracy = evaluate_model(model, X1_val, X2_val, y_val)
+        print(f"Validation Accuracy: {accuracy:.4f};", end=" ")
+        accuracies.append(accuracy)
 
         # Stampa dei valori unici delle classi predette e delle classi reali
         val_predictions = np.array(val_predictions)
         val_true_labels = np.array(val_true_labels)
         print("Unique predicted classes:", np.unique(np.argmax(val_predictions, axis=1)))
-        print("Unique true classes:", np.unique(np.argmax(val_true_labels, axis=1)))
 
         # Check early stopping
         early_stopping(val_loss / len(val_loader), model, os.path.join(util.getModelsPath(), 'checkpoint.pth'))
@@ -314,7 +377,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, regulariz
     return model
 
 
-def evaluate_model(model, X1_test, X2_test, X3_test, y_test, custom_device=None):
+def evaluate_model(model, X1_test, X2_test, y_test, custom_device=None, display=False):
     """
     Funzione che valuta un modello.
 
@@ -332,13 +395,13 @@ def evaluate_model(model, X1_test, X2_test, X3_test, y_test, custom_device=None)
     # Spostamento dei tensori sul dispositivo (cpu o gpu)
     X1_test = torch.tensor(X1_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
     X2_test = torch.tensor(X2_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
-    X3_test = torch.tensor(X3_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
+    #X3_test = torch.tensor(X3_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
     y_test = torch.tensor(y_test, dtype=torch.float32).to(device if custom_device is None else custom_device)
 
     model.eval()  # Modello impostato in modalità valutazione
 
     with torch.no_grad():  # Disabilita il calcolo dei gradienti
-        outputs = model(X1_test, X2_test, X3_test)  # Forward pass
+        outputs = model(X1_test, X2_test)  # Forward pass
         predictions = outputs.cpu().numpy()  # Predizioni del modello
         y_pred = (predictions == predictions.max(axis=1)[:, None]).astype(int)  # Conversione delle predizioni in array di 0 e 1 (one-hot encoding)
         y_test = y_test.cpu().numpy()  # Conversione delle label in array numpy
@@ -348,7 +411,11 @@ def evaluate_model(model, X1_test, X2_test, X3_test, y_test, custom_device=None)
         precision = precision_score(y_test, y_pred, average='weighted')
         recall = recall_score(y_test, y_pred, average='weighted')
         f1 = f1_score(y_test, y_pred, average='weighted')
-        print(f"\nEvaluation Metrics\nAccuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}")
+        if display:
+            print(f"\nEvaluation Metrics\nAccuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}")
+            # salvo y_test e y_pred per il calcolo della confusion matrix
+            np.save(os.path.join(util.getModelsPath(), "y_test.npy"), y_test)
+            np.save(os.path.join(util.getModelsPath(), "y_pred.npy"), y_pred)
 
         return accuracy
 
@@ -378,7 +445,7 @@ def load_model(model, file_path):
     model.eval()
 
 
-def objective(trial, X1_train, X2_train, X3_train, y_train, X1_val, X2_val, X3_val, y_val, num_classes):
+def objective(trial, X1_train, X2_train, y_train, X1_val, X2_val, y_val, num_classes):
     """
     Funzione obiettivo per l'ottimizzazione degli iperparametri.
 
@@ -408,11 +475,11 @@ def objective(trial, X1_train, X2_train, X3_train, y_train, X1_val, X2_val, X3_v
 
     
     hyperparameters = {
-        'num_epochs': trial.suggest_int('num_epochs', 20, 30),
-        'hidden_size_1': trial.suggest_int('hidden_size_1', 64, 96, step=32),
-        'hidden_size_2': trial.suggest_int('hidden_size_2', 32, 64, step=32),
-        'hidden_size_3': trial.suggest_int('hidden_size_3', 32, 96, step=32),
-        'dropout_rate': trial.suggest_float('dropout_rate', 0.2, 0.4, step=0.1),
+        'num_epochs': trial.suggest_int('num_epochs', 50, 60),
+        'hidden_size_1': trial.suggest_int('hidden_size_1', 32, 96, step=32),
+        'hidden_size_2': trial.suggest_int('hidden_size_2', 16, 64, step=16),
+        'hidden_size_3': trial.suggest_int('hidden_size_3', 16, 96, step=16),
+        'dropout_rate': trial.suggest_float('dropout_rate', 0.2, 0.5, step=0.1),
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1e-2),
         'batch_size': trial.suggest_int('batch_size', 16, 64, step=16),
         'regularizer': trial.suggest_categorical('regularizer', ['l1', 'l2']),
@@ -425,13 +492,19 @@ def objective(trial, X1_train, X2_train, X3_train, y_train, X1_val, X2_val, X3_v
     model = MultiInputLSTM(  # Creazione del modello con gli iperparametri e spostamento sul dispositivo (cpu o gpu)
         input_size_1=X1_train.shape[2], 
         input_size_2=X2_train.shape[2], 
-        input_size_3=X3_train.shape[2], 
+        #input_size_3=X3_train.shape[2], 
         hidden_size_1=hyperparameters['hidden_size_1'],
         hidden_size_2=hyperparameters['hidden_size_2'],
         hidden_size_3=hyperparameters['hidden_size_3'],
         num_classes=num_classes, 
         dropout_rate=hyperparameters['dropout_rate']
     ).to(device)
+
+    '''X1_train_tensor = torch.from_numpy(X1_train).float()
+    X2_train_tensor = torch.from_numpy(X2_train).float()
+    summary(model, 
+            input_size=[(1, X1_train_tensor.shape[1], X1_train_tensor.shape[2]), (1, X2_train_tensor.shape[1], X2_train_tensor.shape[2])],
+            col_names=["input_size", "output_size", "num_params", "kernel_size", "mult_adds"])'''
     
     criterion = nn.BCELoss()  # Funzione di loss Binary Cross Entropy
     if hyperparameters['regularizer'] == 'l2':  # Definizione dell'ottimizzatore in base al regolarizzatore
@@ -440,20 +513,20 @@ def objective(trial, X1_train, X2_train, X3_train, y_train, X1_val, X2_val, X3_v
         optimizer = optim.Adam(model.parameters(), lr=hyperparameters['learning_rate']) if hyperparameters['optimizer'] == 'adam' else optim.SGD(model.parameters(), lr=hyperparameters['learning_rate'])
     
     # Creazione dei dataloader per il training e la validazione
-    train_dataset = CustomDataset(X1_train, X2_train, X3_train, y_train)
+    train_dataset = CustomDataset(X1_train, X2_train, y_train)
     train_loader = DataLoader(train_dataset, batch_size=hyperparameters['batch_size'], shuffle=False)
-    val_dataset = CustomDataset(X1_val, X2_val, X3_val, y_val)
+    val_dataset = CustomDataset(X1_val, X2_val, y_val)
     val_loader = DataLoader(val_dataset, batch_size=hyperparameters['batch_size'], shuffle=False)
 
     # Addestramento del modello e valutazione
     model = train_model(model, train_loader, val_loader, criterion, optimizer, hyperparameters['regularizer'], hyperparameters['weight_decay_rate'], num_epochs=hyperparameters['num_epochs'], trial=trial)
-    val_accuracy = evaluate_model(model, X1_val, X2_val, X3_val, y_val)
+    val_accuracy = evaluate_model(model, X1_val, X2_val, y_val)
 
     # Se l'accuracy è migliore della migliore trovata finora, salvo il modello
     global best_accuracy
     if val_accuracy > best_accuracy:
         best_accuracy = val_accuracy
-        save_model(model, os.path.join(util.getModelsPath(), 'LSTM_Combo3.pth'))
+        save_model(model, os.path.join(util.getModelsPath(), 'LSTM_Combo2.pth'))
 
     # Report dell'Hyperband per la potatura
     '''trial.report(val_accuracy, step=hyperparameters['num_epochs'])
@@ -463,7 +536,7 @@ def objective(trial, X1_train, X2_train, X3_train, y_train, X1_val, X2_val, X3_v
     return val_accuracy
 
 
-def train_best_model(best_param, X1, X2, X3, y, X1_val, X2_val, X3_val, y_val, num_classes, save_path):
+def train_best_model(best_param, X1, X2, y, X1_val, X2_val, y_val, num_classes, save_path):
     """
     Funzione che addestra il modello con i migliori iperparametri trovati.
 
@@ -489,14 +562,19 @@ def train_best_model(best_param, X1, X2, X3, y, X1_val, X2_val, X3_val, y_val, n
 
     model = MultiInputLSTM(  # Creazione del modello con i migliori iperparametri e spostamento sul dispositivo (cpu o gpu)
         input_size_1=X1.shape[2], 
-        input_size_2=X2.shape[2], 
-        input_size_3=X3.shape[2], 
+        input_size_2=X2.shape[2],
         hidden_size_1=best_param['hidden_size_1'], 
         hidden_size_2=best_param['hidden_size_2'], 
         hidden_size_3=best_param['hidden_size_3'],
         num_classes=num_classes, 
         dropout_rate=best_param['dropout_rate']
     ).to(device)
+
+    X1_train_tensor = torch.from_numpy(X1).float()
+    X2_train_tensor = torch.from_numpy(X2).float()
+    summary(model, 
+            input_size=[(1, X1_train_tensor.shape[1], X1_train_tensor.shape[2]), (1, X2_train_tensor.shape[1], X2_train_tensor.shape[2])],
+            col_names=["output_size", "num_params", "kernel_size", "mult_adds"])
 
     criterion = nn.BCELoss()  # Funzione di loss Binary Cross Entropy
     
@@ -511,17 +589,28 @@ def train_best_model(best_param, X1, X2, X3, y, X1_val, X2_val, X3_val, y_val, n
         optimizer = optim.Adam(model.parameters(), lr=learning_rate) if optimizer == 'adam' else optim.SGD(model.parameters(), lr=learning_rate)
     
     # Creazione dei dataloader per il training e la validazione
-    train_dataset = CustomDataset(X1, X2, X3, y)
+    train_dataset = CustomDataset(X1, X2, y)
     train_loader = DataLoader(train_dataset, batch_size=best_param['batch_size'], shuffle=False)
-    val_dataset = CustomDataset(X1_val, X2_val, X3_val, y_val)
+    val_dataset = CustomDataset(X1_val, X2_val, y_val)
     val_loader = DataLoader(val_dataset, batch_size=best_param['batch_size'], shuffle=False)
 
-    train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, num_epochs=best_param['num_epochs'])  # Addestramento del modello
-    save_model(model, os.path.join(save_path, 'LSTM_Combo3_new.pth'))  # Salvataggio del modello
+    best_param['num_epochs'] = 50
+    train_model(model, train_loader, val_loader, criterion, optimizer, regularizer, weight_decay_rate, X1_val, X2_val, y_val, num_epochs=best_param['num_epochs'])  # Addestramento del modello
+    evaluate_model(model, X1_val, X2_val, y_val, display=True)  # Valutazione del modello
+    save_model(model, os.path.join(save_path, 'LSTM_Combo2_opt.pth'))  # Salvataggio del modello
     print("Modello salvato con successo")
 
+    # salvo i vettori accuracies, train_losses e val_losses in un file .npy
+    np.save(os.path.join(util.getModelsPath(), 'accuracies.npy'), accuracies)
+    np.save(os.path.join(util.getModelsPath(), 'train_losses.npy'), train_losses)
+    np.save(os.path.join(util.getModelsPath(), 'val_losses.npy'), val_losses)
+    # svuoto i vettori
+    accuracies.clear()
+    train_losses.clear()
+    val_losses.clear()
 
-def create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes):
+
+def create_model(X1, X2, y, X1_test, X2_test, y_test, num_classes):
     """
     Funzione che crea il modello e ne ottimizza gli iperparametri.
 
@@ -539,17 +628,14 @@ def create_model(X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes):
 
     pruner = optuna.pruners.HyperbandPruner(min_resource=1, max_resource=20, reduction_factor=3)
     study = optuna.create_study(direction='maximize', pruner=pruner)
-    study.optimize(lambda trial: objective(trial, X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes), n_trials=50)
+    study.optimize(lambda trial: objective(trial, X1, X2, y, X1_test, X2_test, y_test, num_classes), n_trials=300)
     best_params = study.best_params
     print(f"\nBest params: {best_params}")
     best_params['X1_size'] = X1.shape[2]
     best_params['X2_size'] = X2.shape[2]
-    best_params['X3_size'] = X3.shape[2]
     best_params['num_classes'] = num_classes
     np.save(os.path.join(util.getModelsPath(), 'best_params.npy'), best_params)
     print("Salvati in 'best_params.npy'")
-    #print("\nAddestramento del modello con i migliori iperparametri...")
-    #train_best_model(best_params, X1, X2, X3, y, X1_test, X2_test, X3_test, y_test, num_classes, util.getModelsPath())
     
     global best_accuracy
     best_accuracy = 0.0

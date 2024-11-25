@@ -112,4 +112,4 @@ dot.edge('Dropout_ReLU', 'FC2')
 dot.edge('FC2', 'Sigmoid')
 
 # Salva come immagine
-dot.render('lstm_model_structure_updated', format='png', cleanup=True)
+dot.render('lstm_model_structure', format='png', cleanup=True)

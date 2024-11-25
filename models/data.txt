@@ -1,0 +1,14 @@
+1: Accuracy: 0.9535, Precision: 0.9572, Recall: 0.9535, F1 Score: 0.9517
+Epoch 50/50 - Training Loss: 0.0966; Validation Loss: 0.0758; Validation Accuracy: 0.9463; Unique predicted classes: [0 1 2 3 4 5]
+
+problema: curva accuratezza un po storta
+
+2: Accuracy: 0.9750, Precision: 0.9764, Recall: 0.9750, F1 Score: 0.9749
+Epoch 50/50 - Training Loss: 0.0597; Validation Loss: 0.0414; Validation Accuracy: 0.9654; Unique predicted classes: [0 1 2 3 4 5]
+
+problema: le classi da 600 nella CM sono a 600 tutte
+
+3: Accuracy: 0.9640, Precision: 0.9657, Recall: 0.9640, F1 Score: 0.9638
+Epoch 50/50 - Training Loss: 0.0830; Validation Loss: 0.0556; Validation Accuracy: 0.9640; Unique predicted classes: [0 1 2 3 4 5]
+
+sembra tutto apposto

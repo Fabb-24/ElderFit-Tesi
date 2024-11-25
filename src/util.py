@@ -8,7 +8,7 @@ import mediapipe as mp
 #import tensorflow_hub as hub
 import torch
 
-from learning.models_pytorch_no import MultiInputLSTM
+from learning.models_pytorch import MultiInputLSTM
 
 load_dotenv()
 
@@ -152,7 +152,7 @@ def get_pytorch_model(model_path):
     - model (nn.Module): modello PyTorch
     """
 
-    best_params = np.load(os.path.join(getModelsPath(), "best_params_full.npy"), allow_pickle=True).item()
+    best_params = np.load(os.path.join(getModelsPath(), "best_params.npy"), allow_pickle=True).item()
     model = MultiInputLSTM(
         best_params['X1_size'], best_params['X2_size'],
         best_params['hidden_size_1'], best_params['hidden_size_2'], best_params['hidden_size_3'],

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from data.frame_mediapipe import Frame
 from data.window import Window
-from data.videoParams import VideoParams
+from data.video_params_old import VideoParams
 import os
 import util
 from dotenv import load_dotenv
